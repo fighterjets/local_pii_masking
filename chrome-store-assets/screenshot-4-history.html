@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1280, initial-scale=1.0">
+  <title>Screenshot 4 - Processing History</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1280px;
+      height: 800px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .screenshot-container {
+      width: 1200px;
+      height: 720px;
+      background: #f8fafc;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      padding: 24px 32px;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-export {
+      background: #3b82f6;
+      color: white;
+    }
+    .btn-clear {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+    .content {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
+    }
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px 24px;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      background: #eff6ff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .stat-icon.green { background: #ecfdf5; }
+    .stat-icon.purple { background: #f3e8ff; }
+    .stat-info h3 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+    .stat-info p {
+      font-size: 13px;
+      color: #64748b;
+    }
+    .history-list {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .history-header {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+      padding: 16px 24px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .history-item {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+      padding: 20px 24px;
+      border-bottom: 1px solid #f1f5f9;
+      align-items: center;
+    }
+    .history-item:last-child {
+      border-bottom: none;
+    }
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      background: #dbeafe;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .file-details h4 {
+      font-size: 14px;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .file-details p {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .detections {
+      font-size: 13px;
+      color: #334155;
+    }
+    .detections .count {
+      font-weight: 600;
+      color: #dc2626;
+    }
+    .models {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .time {
+      font-size: 13px;
+      color: #64748b;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #e2e8f0;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .compliance-banner {
+      margin-top: 24px;
+      padding: 16px 24px;
+      background: #eff6ff;
+      border: 1px solid #dbeafe;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .compliance-banner .icon {
+      font-size: 20px;
+    }
+    .compliance-banner p {
+      font-size: 14px;
+      color: #1e40af;
+    }
+    .compliance-banner strong {
+      color: #1e3a8a;
+    }
+  </style>
+</head>
+<body>
+  <div class="screenshot-container">
+    <div class="header">
+      <h1>📋 Processing History</h1>
+      <div class="header-actions">
+        <button class="btn btn-export">📥 Export JSON</button>
+        <button class="btn btn-clear">Clear History</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-icon">📄</div>
+          <div class="stat-info">
+            <h3>24</h3>
+            <p>Files Processed</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">🛡️</div>
+          <div class="stat-info">
+            <h3>156</h3>
+            <p>PII Items Redacted</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">⏱️</div>
+          <div class="stat-info">
+            <h3>2.3s</h3>
+            <p>Avg. Processing Time</p>
+          </div>
+        </div>
+      </div>
+      <div class="history-list">
+        <div class="history-header">
+          <span>File</span>
+          <span>Detections</span>
+          <span>Models Used</span>
+          <span>Time</span>
+          <span>Actions</span>
+        </div>
+        <div class="history-item">
+          <div class="file-info">
+            <div class="file-icon">📄</div>
+            <div class="file-details">
+              <h4>Employee_Data_2024.docx</h4>
+              <p>Today, 2:34 PM</p>
+            </div>
+          </div>
+          <div class="detections"><span class="count">8</span> items found</div>
+          <div class="models">Regex + EN NER</div>
+          <div class="time">1.8s</div>
+          <div class="actions">
+            <button class="action-btn" title="Download">⬇️</button>
+            <button class="action-btn" title="View">👁️</button>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="file-info">
+            <div class="file-icon">📑</div>
+            <div class="file-details">
+              <h4>Contract_Acme_Corp.pdf</h4>
+              <p>Today, 11:15 AM</p>
+            </div>
+          </div>
+          <div class="detections"><span class="count">12</span> items found</div>
+          <div class="models">Regex + EN NER</div>
+          <div class="time">2.4s</div>
+          <div class="actions">
+            <button class="action-btn" title="Download">⬇️</button>
+            <button class="action-btn" title="View">👁️</button>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="file-info">
+            <div class="file-icon">📝</div>
+            <div class="file-details">
+              <h4>客户资料_新加坡.txt</h4>
+              <p>Yesterday, 4:22 PM</p>
+            </div>
+          </div>
+          <div class="detections"><span class="count">15</span> items found</div>
+          <div class="models">Regex + CN NER</div>
+          <div class="time">3.1s</div>
+          <div class="actions">
+            <button class="action-btn" title="Download">⬇️</button>
+            <button class="action-btn" title="View">👁️</button>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="file-info">
+            <div class="file-icon">📄</div>
+            <div class="file-details">
+              <h4>Patient_Records_Q4.docx</h4>
+              <p>Yesterday, 9:30 AM</p>
+            </div>
+          </div>
+          <div class="detections"><span class="count">23</span> items found</div>
+          <div class="models">Regex + EN NER</div>
+          <div class="time">2.9s</div>
+          <div class="actions">
+            <button class="action-btn" title="Download">⬇️</button>
+            <button class="action-btn" title="View">👁️</button>
+          </div>
+        </div>
+      </div>
+      <div class="compliance-banner">
+        <span class="icon">✓</span>
+        <p><strong>Compliance Ready:</strong> All history entries include SHA-256 hashes (not PII values). Export JSON for audit trails.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

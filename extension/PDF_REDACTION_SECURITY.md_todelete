@@ -1,0 +1,253 @@
+# PDF Redaction Security Notice
+
+## Critical Limitation ⚠️
+
+**The browser extension creates VISUAL redaction only.** Black boxes cover PII text, but the underlying text remains in the PDF data structure and **can be extracted using PDF tools**.
+
+## Why This Happens
+
+### Technical Explanation
+
+PDF files contain:
+1. **Content streams** - Drawing commands including text
+2. **Visual layers** - What you see on screen
+
+When we add black rectangles:
+- ✅ Visual coverage: Text is hidden from view
+- ❌ Content removal: Text commands remain in PDF structure
+
+### Browser Library Limitations
+
+The `pdf-lib` library (used in browser extensions) can:
+- ✅ Add content (rectangles, text, images)
+- ✅ Modify visual appearance
+- ❌ **Cannot** parse and remove text operators from content streams
+
+To truly remove text, we would need to:
+1. Parse the PDF content stream (binary format)
+2. Identify text showing operators (`Tj`, `TJ`, `'`, `"`)
+3. Remove operators for PII text while keeping others
+4. Rebuild the content stream
+
+This is **extremely complex** and requires low-level PDF manipulation that browser libraries don't support.
+
+## Security Implications
+
+### What Can Be Extracted
+
+Using PDF text extraction tools, someone could:
+- ✅ Extract all text from the PDF (including PII under black boxes)
+- ✅ Search for text (finds PII even if covered)
+- ✅ Copy/paste text (if boxes are removed)
+
+### What Is Protected
+
+- ✅ Visual inspection: PII is not visible
+- ✅ Screenshots: Show black boxes
+- ✅ Printing: Black boxes appear
+
+### Risk Level
+
+| Use Case | Risk | Recommendation |
+|----------|------|----------------|
+| Internal preview | ✅ Low | Extension is fine |
+| Sharing with colleagues | ⚠️ Medium | Print to PDF first |
+| Legal compliance | 🔴 High | Use certified tools |
+| GDPR/HIPAA | 🔴 High | Use certified tools |
+| Public release | 🔴 High | Use certified tools |
+
+## Complete Text Removal Methods
+
+### Method 1: Print to PDF (Recommended)
+
+**Steps:**
+1. Download the redacted PDF from the extension
+2. Open it in any PDF viewer (Preview, Adobe Reader, Chrome)
+3. File → Print
+4. Select "Save as PDF" as the printer
+5. Save the output
+
+**What this does:**
+- Converts the PDF to an image-based representation
+- "Flattens" all layers
+- Removes underlying text - **PII is truly gone**
+
+**Pros:**
+- ✅ Simple
+- ✅ Free
+- ✅ Works on all platforms
+- ✅ Truly removes text
+
+**Cons:**
+- ⚠️ Increases file size (images larger than text)
+- ⚠️ Text becomes non-selectable (whole document)
+- ⚠️ Accessibility reduced (screen readers can't read it)
+
+### Method 2: Adobe Acrobat Pro
+
+**Steps:**
+1. Open PDF in Adobe Acrobat Pro
+2. Tools → Redact
+3. Mark sensitive areas
+4. Apply redactions
+5. Save
+
+**What this does:**
+- Removes text from content stream
+- Certified redaction
+- Maintains PDF structure
+- Keeps non-PII text selectable
+
+**Pros:**
+- ✅ Certified for legal use
+- ✅ Maintains text selectability
+- ✅ Smaller file size
+- ✅ Accessible
+
+**Cons:**
+- ❌ Costs money (~$20/month)
+- ❌ Not a browser solution
+
+### Method 3: Command-Line Tools
+
+**Using `pdftk` and `gs` (Ghostscript):**
+
+```bash
+# Step 1: Get redacted PDF from extension
+# Save as: redacted.pdf
+
+# Step 2: Flatten using Ghostscript
+gs -dNOPAUSE -dBATCH -sDEVICE=pdfwrite \
+   -dCompatibilityLevel=1.4 \
+   -sOutputFile=flattened.pdf \
+   redacted.pdf
+```
+
+**What this does:**
+- Reprocesses the PDF
+- Can remove underlying text (depending on options)
+- Command-line automation
+
+**Pros:**
+- ✅ Free and open source
+- ✅ Scriptable/automatable
+- ✅ Cross-platform
+
+**Cons:**
+- ❌ Requires installation
+- ❌ Technical knowledge needed
+- ❌ May change document appearance
+
+## Verification Methods
+
+### How to Check if Text is Removed
+
+1. **Text extraction test:**
+   ```bash
+   # Install pdftotext (part of poppler-utils)
+   pdftotext redacted.pdf output.txt
+   cat output.txt  # Should NOT contain PII
+   ```
+
+2. **Copy/paste test:**
+   - Open PDF in viewer
+   - Try selecting text under black boxes
+   - Should be impossible if properly flattened
+
+3. **PDF editor test:**
+   - Open in PDF editor (e.g., PDFescape online)
+   - Try to delete black rectangles
+   - Should only see white/empty space underneath
+
+## Recommendations by Use Case
+
+### For Personal Use
+✅ **Extension redaction is fine**
+- Quick PII removal
+- Not legally binding
+- Visual privacy sufficient
+
+### For Internal Business Documents
+⚠️ **Use extension + Print to PDF**
+- Extra security step
+- Truly removes text
+- Free and simple
+
+### For Legal/Compliance Documents
+🔴 **Use Adobe Acrobat Pro or similar**
+- Certified redaction
+- Audit trail
+- Legal defensibility
+- GDPR/HIPAA compliant
+
+### For Automated Workflows
+⚠️ **Use extension + Ghostscript flattening**
+- Scriptable solution
+- Batch processing
+- Cost-effective
+
+## Future Improvements
+
+Potential enhancements (complex to implement):
+
+1. **Built-in flattening**
+   - Convert pages to images automatically
+   - Requires canvas API and image embedding
+   - Significantly increases file size
+
+2. **Content stream manipulation**
+   - Parse PDF operators
+   - Remove text commands
+   - Rebuild content stream
+   - Very complex, error-prone
+
+3. **Server-side processing**
+   - Upload to server for redaction
+   - Use server-side PDF libraries
+   - Defeats purpose of local-only processing
+
+## Bottom Line
+
+### What the Extension Does
+
+✅ Creates **visually redacted PDFs** perfect for:
+- Preview/review
+- Internal use
+- Non-sensitive sharing
+- Quick redaction
+
+### What the Extension Does NOT Do
+
+❌ Does NOT create **legally compliant** redacted PDFs for:
+- GDPR compliance
+- HIPAA compliance
+- Legal proceedings
+- Public document release
+
+### The Solution
+
+**For complete text removal:**
+1. Use the extension for quick redaction
+2. Print the result to PDF (flattens it)
+3. Verify text is removed with extraction tools
+4. Use professional tools for legal compliance
+
+## Disclaimer
+
+This browser extension is provided for **convenience only** and is not intended for:
+- Legal document redaction
+- Compliance-required redaction (GDPR, HIPAA, etc.)
+- High-security document handling
+
+**Always verify redactions** before sharing sensitive documents. When in doubt, use certified professional redaction tools like Adobe Acrobat Pro.
+
+## Summary
+
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Visual redaction | ✅ Perfect | Black boxes precisely cover PII |
+| Text extractability | ❌ Issue | Text still in PDF structure |
+| Workaround | ✅ Simple | Print to PDF flattens it |
+| Professional use | ⚠️ Limited | Use certified tools for compliance |
+
+**The extension is a great first step, but add a flattening step for complete security.**

@@ -1,0 +1,6 @@
+PDF.js: 3.11.174 (Mozilla - legacy build for extensions)
+pdf-lib: 1.17.1
+Downloaded: Fri Feb 13 07:03:25 +08 2026
+Purpose:
+  - PDF.js: Extract text and positions from PDF
+  - pdf-lib: Create new PDF with redactions

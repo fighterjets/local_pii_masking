@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1400, initial-scale=1.0">
+  <title>Marquee Promo Tile - 1400x560</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1400px;
+      height: 560px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .tile {
+      width: 1400px;
+      height: 560px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+    .tile::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+      clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+    }
+    .content {
+      width: 50%;
+      padding: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .badge {
+      display: inline-flex;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      width: fit-content;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    h1 {
+      font-size: 56px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 16px;
+      line-height: 1.1;
+    }
+    h1 span {
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      font-size: 22px;
+      color: #94a3b8;
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+    .features {
+      display: flex;
+      gap: 32px;
+    }
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .feature-text {
+      font-size: 16px;
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+    .visual {
+      width: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .mockup {
+      width: 520px;
+      height: 420px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .mockup-header {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      padding: 16px 20px;
+      color: white;
+    }
+    .mockup-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .mockup-content {
+      flex: 1;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    .detection-item {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .detection-item .type {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detection-item .conf {
+      font-size: 11px;
+      padding: 4px 10px;
+      background: #dcfce7;
+      color: #166534;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .redacted-preview {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .redacted-preview p {
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.8;
+    }
+    .black-box {
+      display: inline-block;
+      background: #1e293b;
+      color: #1e293b;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="tile">
+    <div class="content">
+      <div class="badge">🔐 ENTERPRISE-GRADE SECURITY</div>
+      <h1>Local PII <span>Masking</span></h1>
+      <p class="subtitle">Detect and redact sensitive information from documents.<br>100% client-side. Zero data transmission.</p>
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">🛡️</div>
+          <span class="feature-text">Private & Offline</span>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🤖</div>
+          <span class="feature-text">AI-Powered</span>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📋</div>
+          <span class="feature-text">GDPR Compliant</span>
+        </div>
+      </div>
+    </div>
+    <div class="visual">
+      <div class="mockup">
+        <div class="mockup-header">
+          <h3>🔒 Local PII Masking — 8 Items Detected</h3>
+        </div>
+        <div class="mockup-content">
+          <div class="detection-item">
+            <span class="type">👤 PERSON — Tan Wei Ming</span>
+            <span class="conf">95%</span>
+          </div>
+          <div class="detection-item">
+            <span class="type">🆔 NRIC — S1234567D</span>
+            <span class="conf">100%</span>
+          </div>
+          <div class="redacted-preview">
+            <p>Employee: <span class="black-box">██████</span><br>
+            ID: <span class="black-box">████████</span><br>
+            Email: <span class="black-box">█████████████</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

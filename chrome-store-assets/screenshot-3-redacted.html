@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1280, initial-scale=1.0">
+  <title>Screenshot 3 - Redacted Document</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1280px;
+      height: 800px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .screenshot-container {
+      width: 1200px;
+      height: 720px;
+      background: #f8fafc;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      overflow: hidden;
+      display: flex;
+    }
+    .left-panel {
+      width: 420px;
+      background: white;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: white;
+    }
+    .success-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .success-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .success-text h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .success-text p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    .redaction-summary {
+      padding: 20px 24px;
+      background: #ecfdf5;
+      border-bottom: 1px solid #a7f3d0;
+    }
+    .redaction-summary h4 {
+      font-size: 13px;
+      color: #065f46;
+      margin-bottom: 12px;
+    }
+    .redaction-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .redaction-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #065f46;
+    }
+    .redaction-item .icon {
+      font-size: 14px;
+    }
+    .download-section {
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .download-section h4 {
+      font-size: 14px;
+      color: #1e293b;
+      margin-bottom: 16px;
+    }
+    .file-preview {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .file-preview-icon {
+      width: 48px;
+      height: 48px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .file-preview-info h5 {
+      font-size: 14px;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .file-preview-info p {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .btn-download {
+      width: 100%;
+      padding: 14px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .security-note {
+      margin-top: 16px;
+      padding: 12px;
+      background: #fef3c7;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #92400e;
+      text-align: center;
+    }
+    /* Right Panel */
+    .right-panel {
+      flex: 1;
+      padding: 32px;
+      background: white;
+      overflow-y: auto;
+    }
+    .doc-header {
+      text-align: center;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .doc-header h2 {
+      font-size: 20px;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .doc-header .status {
+      display: inline-block;
+      background: #dcfce7;
+      color: #166534;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .document-content {
+      font-size: 15px;
+      line-height: 1.8;
+      color: #334155;
+    }
+    .redacted-box {
+      display: inline-block;
+      background: #1e293b;
+      color: #1e293b;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      user-select: none;
+    }
+    .redacted-box:hover {
+      background: #374151;
+    }
+    .paragraph {
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="screenshot-container">
+    <div class="left-panel">
+      <div class="header">
+        <div class="success-badge">
+          <div class="success-icon">✓</div>
+          <div class="success-text">
+            <h3>Redaction Complete</h3>
+            <p>8 PII items masked successfully</p>
+          </div>
+        </div>
+      </div>
+      <div class="redaction-summary">
+        <h4>✅ Redacted Items</h4>
+        <div class="redaction-list">
+          <div class="redaction-item">
+            <span class="icon">👤</span> 3 Person Names
+          </div>
+          <div class="redaction-item">
+            <span class="icon">🆔</span> 2 NRIC Numbers
+          </div>
+          <div class="redaction-item">
+            <span class="icon">✉️</span> 2 Email Addresses
+          </div>
+          <div class="redaction-item">
+            <span class="icon">📞</span> 1 Phone Number
+          </div>
+        </div>
+      </div>
+      <div class="download-section">
+        <h4>Download Redacted File</h4>
+        <div class="file-preview">
+          <div class="file-preview-icon">📄</div>
+          <div class="file-preview-info">
+            <h5>Employee_Data_2024_REDACTED.docx</h5>
+            <p>22 KB • All formatting preserved</p>
+          </div>
+        </div>
+        <button class="btn-download">
+          ⬇️ Download Document
+        </button>
+        <div class="security-note">
+          🔒 Original file never uploaded to any server
+        </div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="doc-header">
+        <h2>Employee Confidential Report</h2>
+        <span class="status">✓ REDACTED</span>
+      </div>
+      <div class="document-content">
+        <div class="paragraph">
+          Employee Name: <span class="redacted-box">██████</span><br>
+          NRIC: <span class="redacted-box">████████</span><br>
+          Contact: <span class="redacted-box">████████████</span> | <span class="redacted-box">█████████████</span>
+        </div>
+        <div class="paragraph">
+          Manager: <span class="redacted-box">███████</span><br>
+          Department: Human Resources<br>
+          Employee ID: EMP-2024-001
+        </div>
+        <div class="paragraph">
+          Emergency Contact: <span class="redacted-box">████████</span><br>
+          Relationship: Spouse<br>
+          Phone: <span class="redacted-box">████████████</span>
+        </div>
+        <div class="paragraph">
+          This document contains confidential employee information. Please handle with care and ensure proper data protection measures are in place.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

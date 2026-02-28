@@ -1,0 +1,541 @@
+# Chinese PII Detection - 中文个人信息检测
+
+## 概述 (Overview)
+
+本扩展现已支持中文个人信息检测，包括姓名、性别、出生日期、身份证号、地址等。
+
+This extension now supports comprehensive Chinese PII detection including names, gender, date of birth, ID cards, addresses, and more.
+
+---
+
+## 支持的检测类型 (Supported Detection Types)
+
+### 1. 姓名 (Chinese Names)
+
+**检测模式 (Detection Patterns):**
+
+#### 带标签的姓名 (Names with Labels)
+```
+姓名: 李明
+名字: 王芳
+```
+- Pattern: `姓名|名字` followed by 2-4 Chinese characters
+- Type: `NAME_CN`
+- Examples: 李明, 王芳, 陈晓明, 刘建国
+
+#### 带职称的姓名 (Names with Titles)
+```
+张伟先生
+李芳女士
+王医生
+陈博士
+刘教授
+赵总经理
+孙经理
+周主任
+```
+- Pattern: 2-4 Chinese characters + title (先生/女士/医生/博士/教授/总经理/经理/主任)
+- Type: `NAME_CN`
+- More reliable than standalone names
+
+**Why not standalone names?**
+- Chinese names are typically 2-3 characters (family name + given name)
+- Too many false positives without context (普通/工作/问题 could be mistaken)
+- Better to detect with labels or titles for accuracy
+
+---
+
+### 2. 性别 (Gender)
+
+**检测模式 (Detection Patterns):**
+
+#### 带标签的性别 (Gender with Labels)
+```
+性别: 男
+性別: 女 (traditional Chinese)
+```
+- Pattern: `性别|性別` followed by `男` (male) or `女` (female)
+- Type: `GENDER_CN`
+- High precision
+
+#### 独立的性别字符 (Standalone Gender with Context)
+```
+男性患者
+女性员工
+男
+女
+```
+- Pattern: `男` or `女` followed by common context characters (性/患/员/工) or punctuation
+- Type: `GENDER_CN`
+- Prevents false positives from random 男/女 in text
+
+**Avoided false positives:**
+- 男人 (man, as a noun, not PII)
+- 女孩 (girl, as a noun, not PII)
+- Random 男/女 in sentences
+
+---
+
+### 3. 出生日期 (Date of Birth)
+
+**检测模式 (Detection Patterns):**
+
+```
+出生日期: 1990年3月15日
+出生年月日: 1985-06-20
+生日: 1992/11/08
+出生: 1988.07.25
+```
+
+**Supported formats:**
+- `1990年3月15日` (Chinese year/month/day)
+- `1990-03-15` (ISO format)
+- `1990/03/15` (slash format)
+- `1990.03.15` (dot format)
+
+**Labels recognized:**
+- 出生日期 (date of birth)
+- 出生年月日 (birth year/month/day)
+- 生日 (birthday)
+- 出生 (born)
+
+- Type: `DATE_OF_BIRTH_CN`
+
+---
+
+### 4. 身份证号码 (Chinese National ID Card)
+
+**检测模式 (Detection Patterns):**
+
+```
+身份证号码: 110101199003151234
+身份证号: 310101199002021234
+身份证: 44010419900303123X
+证件号码: 500101199004041234
+```
+
+**Format:** 18 digits (last digit can be X)
+
+**Structure:**
+- 6 digits: Area code (e.g., 110101 = Beijing Dongcheng)
+- 8 digits: Date of birth (YYYYMMDD)
+- 3 digits: Sequence number (odd = male, even = female)
+- 1 digit: Check digit (0-9 or X)
+
+**Labels recognized:**
+- 身份证号码 (ID card number)
+- 身份证号 (ID card no.)
+- 身份证 (ID card)
+- 证件号码 (document number)
+
+- Type: `NATIONAL_ID_CN`
+- ✅ Validated with checksum algorithm (already implemented)
+
+---
+
+### 5. 地址 (Chinese Addresses)
+
+**检测模式 (Detection Patterns):**
+
+#### 完整地址 (Full Addresses with Labels)
+```
+地址: 上海市浦东新区世纪大道1000号东方明珠大厦5楼503室
+住址: 北京市朝阳区建国路88号SOHO现代城B座1208室
+详细地址: 广东省深圳市南山区科技园南区深圳湾科技生态园10栋A座
+联系地址: 浙江省杭州市西湖区文一西路75号数字娱乐产业园3号楼
+家庭住址: 江苏省南京市玄武区中山东路300号长发中心大厦12楼
+```
+
+**Labels recognized:**
+- 地址 (address)
+- 住址 (residential address)
+- 详细地址 (detailed address)
+- 联系地址 (contact address)
+- 家庭住址 (home address)
+
+#### 地址组件 (Address Components)
+```
+北京市东城区长安街1号
+上海市黄浦区南京东路100号
+广州市天河区天河路208号
+深圳市福田区深南大道1000号
+```
+
+**Address suffixes recognized:**
+- 省 (province)
+- 市 (city)
+- 区 (district)
+- 县 (county)
+- 镇 (town)
+- 乡 (township)
+- 村 (village)
+- 街道 (street/subdistrict)
+- 路 (road)
+- 巷 (lane)
+- 弄 (alley)
+- 号 (number)
+- 室 (room)
+- 楼 (floor/building)
+- 栋 (building)
+- 单元 (unit)
+- 幢 (building/block)
+
+- Type: `ADDRESS_CN`
+- Detects complete addresses and address fragments
+
+---
+
+### 6. 电话号码 (Chinese Phone Numbers)
+
+**检测模式 (Detection Patterns):**
+
+#### 固定电话 (Landline)
+```
+电话: 010-12345678
+联系电话: 021-87654321
+座机: 0755-26549876
+办公电话: 020-38765432
+```
+- Format: 3-4 digit area code + 7-8 digit number
+- Examples: 010-12345678, 021-87654321
+
+#### 手机号码 (Mobile)
+```
+手机: 13912345678
+手机号码: 13812345678
+联系方式: 15912345678
+```
+- Format: 11 digits starting with 1
+- Examples: 139XXXXXXXX, 138XXXXXXXX
+
+**Labels recognized:**
+- 电话 (phone)
+- 手机 (mobile)
+- 联系电话 (contact phone)
+- 联系方式 (contact method)
+- 手机号码 (mobile number)
+- 电话号码 (phone number)
+- 座机 (landline)
+- 办公电话 (office phone)
+
+- Type: `PHONE_CN`
+
+---
+
+### 7. 电子邮箱 (Chinese Email Labels)
+
+**检测模式 (Detection Patterns):**
+
+```
+电子邮件: example@email.com
+邮箱: user@domain.com
+电邮: test@test.com
+Email: admin@company.com.cn
+```
+
+**Labels recognized:**
+- 电子邮件 (email)
+- 邮箱 (mailbox)
+- 电邮 (e-mail, short form)
+- Email (English label in Chinese context)
+
+- Type: `EMAIL_CN`
+- Same validation as regular email pattern
+
+---
+
+## 检测示例 (Detection Examples)
+
+### Example 1: Basic Personal Information
+
+**Input:**
+```
+姓名: 李明
+性别: 男
+出生日期: 1990年3月15日
+身份证号码: 110101199003151234
+```
+
+**Detections:**
+- NAME_CN: 李明
+- GENDER_CN: 男
+- DATE_OF_BIRTH_CN: 1990年3月15日
+- NATIONAL_ID_CN: 110101199003151234
+
+---
+
+### Example 2: Contact Information
+
+**Input:**
+```
+姓名: 陈晓明
+电话号码: 021-62345678
+手机号码: 13901234567
+电子邮件: chenxiaoming@gmail.com
+地址: 上海市浦东新区世纪大道1000号东方明珠大厦5楼503室
+```
+
+**Detections:**
+- NAME_CN: 陈晓明
+- PHONE_CN: 021-62345678
+- PHONE_CN: 13901234567
+- EMAIL_CN: chenxiaoming@gmail.com
+- ADDRESS_CN: 上海市浦东新区世纪大道1000号东方明珠大厦5楼503室
+
+---
+
+### Example 3: Mixed Chinese/English
+
+**Input:**
+```
+Name: 李明 (Li Ming)
+Gender: 男 (Male)
+DOB: 1990年3月15日 (March 15, 1990)
+Phone: 13812345678 (China)
+```
+
+**Detections:**
+- NAME_CN: 李明
+- PERSON (NER): Li Ming
+- GENDER_CN: 男
+- GENDER: Male
+- DATE_OF_BIRTH_CN: 1990年3月15日
+- DATE_OF_BIRTH: March 15, 1990
+- PHONE_CN: 13812345678
+
+---
+
+## 性能考虑 (Performance Considerations)
+
+### Chinese Character Regex
+
+Chinese characters use Unicode range `\u4E00-\u9FFF` (CJK Unified Ideographs)
+
+**Performance impact:**
+- ~10 additional regex patterns
+- Minimal overhead (~5-10ms for 10KB document)
+- Chinese character matching is efficient in modern JavaScript engines
+
+### False Positive Handling
+
+**Low false positive rate:**
+- Gender: Only with context (性别:, 男性, 女性)
+- Names: Only with labels (姓名:, 名字:) or titles (先生, 女士)
+- Addresses: Only with address suffixes (省, 市, 区, 路, 号)
+- Dates: Only with DOB labels (出生日期, 生日)
+
+**Deliberate design choices:**
+- Standalone names NOT detected (too many false positives)
+- Random 男/女 characters NOT detected (only with context)
+- Short address fragments NOT detected (minimum 5 characters)
+
+---
+
+## 测试 (Testing)
+
+### Test File
+
+Upload `test-chinese-detection.txt` to test all patterns.
+
+**Expected detections:**
+- ~20+ names (NAME_CN)
+- ~30+ gender mentions (GENDER_CN)
+- ~15+ dates of birth (DATE_OF_BIRTH_CN)
+- ~10+ ID card numbers (NATIONAL_ID_CN)
+- ~15+ phone numbers (PHONE_CN)
+- ~10+ email addresses (EMAIL_CN)
+- ~20+ addresses (ADDRESS_CN)
+
+**Total: ~120+ Chinese PII detections**
+
+---
+
+## 掩码选项 (Masking Options)
+
+### Redaction (完全编辑)
+```
+Input:  姓名: 李明
+Output: 姓名: [REDACTED_NAME_CN]
+```
+
+### Tokenization (标记化)
+```
+Input:  姓名: 李明
+Output: 姓名: [NAME_CN_1]
+```
+
+### Partial Masking (部分掩码)
+```
+Input:  身份证: 110101199003151234
+Output: 身份证: 11***********1234
+
+Input:  手机: 13912345678
+Output: 手机: 139****5678
+```
+
+---
+
+## 与英文检测的结合 (Integration with English Detection)
+
+### Bilingual Documents
+
+The extension handles bilingual documents seamlessly:
+
+**Example:**
+```
+Personal Information / 个人信息
+Name / 姓名: John Smith / 李明
+Gender / 性别: Male / 男
+DOB / 出生日期: 01/01/1990 / 1990年1月1日
+NRIC / 身份证: S1234567D / 110101199001011234
+```
+
+**Detections:**
+- PERSON (NER): John Smith
+- NAME_CN: 李明
+- GENDER: Male
+- GENDER_CN: 男
+- DATE_OF_BIRTH: 01/01/1990
+- DATE_OF_BIRTH_CN: 1990年1月1日
+- NRIC_SG: S1234567D
+- NATIONAL_ID_CN: 110101199001011234
+
+**Total: Both English and Chinese PII detected!**
+
+---
+
+## 常见问题 (FAQ)
+
+### Q1: 为什么不检测独立的中文姓名？
+**Why not detect standalone Chinese names?**
+
+A: Chinese names are typically 2-3 characters, leading to too many false positives:
+- 问题 (problem) - 2 characters, not a name
+- 工作 (work) - 2 characters, not a name
+- 普通 (ordinary) - 2 characters, not a name
+
+We only detect names with:
+- Labels: 姓名: 李明
+- Titles: 李明先生, 王医生
+
+This ensures high precision.
+
+---
+
+### Q2: 会检测繁体中文吗？
+**Does it detect Traditional Chinese?**
+
+A: Partially:
+- ✅ Names (uses Unicode range, works for both)
+- ✅ Addresses (address suffixes work for both)
+- ✅ Phone numbers (same format)
+- ⚠️ Gender label: 性別 (traditional) is supported
+- ❌ Other labels use simplified Chinese only
+
+**To add full Traditional Chinese support:**
+- Add traditional label variants
+- Example: 出生日期 (simplified) + 出生日期 (traditional)
+
+---
+
+### Q3: 如何处理台湾/香港地址？
+**How to handle Taiwan/Hong Kong addresses?**
+
+A: Currently detects by address suffixes (路, 街, 號 work for all regions).
+
+For better Taiwan/Hong Kong support, you can add:
+- Taiwan: 縣, 鄉, 鎮, 里
+- Hong Kong: 灣, 道, 街, 樓
+
+---
+
+### Q4: 会检测中国大陆以外的中文PII吗？
+**Does it detect Chinese PII outside mainland China?**
+
+A: Yes!
+- ✅ Singapore Chinese names
+- ✅ Malaysia Chinese names
+- ✅ Taiwan addresses (with traditional characters)
+- ✅ Hong Kong addresses
+- ✅ Any Chinese text with standard labels
+
+The patterns are language-based, not region-specific.
+
+---
+
+## 扩展支持 (Future Enhancements)
+
+### Planned Features
+
+1. **繁体中文完整支持 (Full Traditional Chinese)**
+   - Add all label variants
+   - Support Taiwan/Hong Kong specific formats
+
+2. **更多文档类型 (More Document Types)**
+   - Passport numbers (护照号码)
+   - Driver's license (驾驶证)
+   - Social security (社保号)
+
+3. **智能上下文检测 (Smart Context Detection)**
+   - Standalone names with ML (using NER for Chinese)
+   - Relationship detection (配偶, 父亲, 母亲)
+
+4. **地址验证 (Address Validation)**
+   - Province/city validation
+   - Postal code matching
+
+---
+
+## 技术实现 (Technical Implementation)
+
+### Unicode Ranges
+
+```javascript
+// CJK Unified Ideographs: Most common Chinese characters
+[\u4E00-\u9FFF]
+
+// Example usage:
+chineseName: {
+  pattern: /(?:姓名|名字)[\s:：]*([\u4E00-\u9FFF]{2,4})/g,
+  type: 'NAME_CN'
+}
+```
+
+### Pattern Priority
+
+1. **Labeled patterns** (highest precision)
+   - 姓名: 李明
+   - 性别: 男
+   - 出生日期: 1990年3月15日
+
+2. **Context-based patterns** (medium precision)
+   - 李明先生 (name + title)
+   - 男性患者 (gender + context)
+
+3. **Standalone patterns** (lowest precision, most false positives)
+   - Only used when safe (addresses with suffixes)
+
+---
+
+## 版本历史 (Version History)
+
+### v1.1.0 (Current)
+- ✅ Chinese name detection (with labels and titles)
+- ✅ Chinese gender detection (性别: 男/女)
+- ✅ Chinese DOB detection (出生日期: 1990年3月15日)
+- ✅ Chinese address detection (地址: full addresses)
+- ✅ Chinese phone detection (电话: landline and mobile)
+- ✅ Chinese email labels (邮箱: email@domain.com)
+- ✅ Chinese ID card labels (身份证: 18 digits)
+- ✅ Bilingual document support
+
+### v1.0.0 (Previous)
+- English PII detection
+- Asian ID detection (18 countries)
+- NER-based entity detection
+- PDF redaction
+
+---
+
+**Last updated**: February 2026
+**语言支持 (Language Support)**: 简体中文 (Simplified Chinese), partial 繁體中文 (Traditional Chinese)

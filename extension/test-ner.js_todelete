@@ -1,0 +1,157 @@
+const TEST_TEXT = `John Smith works at Google in New York. His colleague Mary Johnson is from Microsoft in Seattle. They met with David Chen from Amazon in San Francisco to discuss the project. The meeting was held at Stanford University with Professor Sarah Williams.
+
+Contact information:
+- Email: john.smith@example.com
+- Phone: +6591234567
+- NRIC: S1234567D
+
+Organizations mentioned: Apple, Facebook, Tesla, NASA
+People mentioned: Bill Gates, Elon Musk, Jeff Bezos
+Locations mentioned: London, Paris, Tokyo, Singapore`;
+
+let nerLoader = null;
+
+async function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+async function init() {
+  const status = document.getElementById('status');
+
+  try {
+    status.textContent = 'Loading ONNX Runtime...';
+    status.className = 'info';
+
+    // Load ONNX Runtime dynamically
+    const ortUrl = chrome.runtime.getURL('libs/onnx/ort.min.js');
+    await loadScript(ortUrl);
+
+    status.textContent = 'Loading Custom NER Loader...';
+
+    // Load Custom NER Loader
+    const loaderUrl = chrome.runtime.getURL('libs/custom-ner-loader.js');
+    await loadScript(loaderUrl);
+
+    // Wait for scripts to initialize
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    status.textContent = 'Configuring ONNX Runtime...';
+    status.className = 'info';
+
+    // Configure ONNX Runtime for single-threaded mode
+    window.ort.env.wasm.numThreads = 1;
+    window.ort.env.wasm.simd = true;
+    window.ort.env.wasm.proxy = false;
+    window.ort.env.wasm.wasmPaths = chrome.runtime.getURL('libs/onnx/');
+
+    console.log('[Test] ONNX configured:', window.ort.env.wasm);
+
+    status.textContent = 'Loading NER model...';
+
+    // Load model using chrome extension URL
+    const modelPath = chrome.runtime.getURL('models/bert-base-NER');
+    nerLoader = new CustomNERLoader();
+    await nerLoader.load(modelPath);
+
+    console.log('[Test] Model loaded successfully');
+
+    status.textContent = '✅ Ready! Click "Run NER Test" button';
+    status.className = 'success';
+
+    // Display test text
+    document.getElementById('testText').textContent = TEST_TEXT;
+
+  } catch (error) {
+    console.error('[Test] Init error:', error);
+    status.textContent = '❌ Error: ' + error.message;
+    status.className = 'error';
+  }
+}
+
+async function runTest() {
+  const status = document.getElementById('status');
+  const results = document.getElementById('results');
+  const logitsDebug = document.getElementById('logitsDebug');
+
+  try {
+    status.textContent = 'Running NER detection...';
+    status.className = 'info';
+    results.innerHTML = '';
+    logitsDebug.textContent = '';
+
+    console.log('[Test] Running prediction on test text...');
+    console.log('[Test] Text length:', TEST_TEXT.length);
+
+    // Run prediction
+    const entities = await nerLoader.predict(TEST_TEXT);
+
+    console.log('[Test] Prediction complete');
+    console.log('[Test] Entities found:', entities);
+
+    // Display results
+    if (entities.length === 0) {
+      results.innerHTML = '<p class="error">⚠️ No entities detected!</p>';
+      status.textContent = '⚠️ No entities detected - check console for details';
+      status.className = 'error';
+    } else {
+      let html = `<p class="success">✅ Found ${entities.length} entities:</p>`;
+
+      // Group by type
+      const byType = {};
+      entities.forEach(e => {
+        if (!byType[e.entity_group]) byType[e.entity_group] = [];
+        byType[e.entity_group].push(e);
+      });
+
+      for (const [type, ents] of Object.entries(byType)) {
+        html += `<h3>${type} (${ents.length})</h3>`;
+        ents.forEach(e => {
+          html += `<div class="entity">
+            <strong>${e.word}</strong><br>
+            <small>Score: ${(e.score * 100).toFixed(1)}% | Pos: ${e.start}-${e.end}</small>
+          </div>`;
+        });
+      }
+
+      results.innerHTML = html;
+      status.textContent = `✅ Test complete! Found ${entities.length} entities`;
+      status.className = 'success';
+    }
+
+    // Debug: Show raw logits for first few tokens
+    if (nerLoader.lastLogits) {
+      const numLabels = Object.keys(nerLoader.config.id2label).length;
+      const debugInfo = {
+        numTokens: nerLoader.lastLogits.dims[1],
+        numLabels: numLabels,
+        firstTokenLogits: Array.from(nerLoader.lastLogits.data.slice(0, numLabels)),
+        labels: nerLoader.config.id2label
+      };
+      logitsDebug.textContent = JSON.stringify(debugInfo, null, 2);
+    }
+
+  } catch (error) {
+    console.error('[Test] Prediction error:', error);
+    console.error('[Test] Error stack:', error.stack);
+    results.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+    status.textContent = '❌ Test failed: ' + error.message;
+    status.className = 'error';
+  }
+}
+
+// Auto-init on load
+window.addEventListener('load', () => {
+  init();
+
+  // Attach event listener to button
+  const runTestBtn = document.getElementById('runTestBtn');
+  if (runTestBtn) {
+    runTestBtn.addEventListener('click', runTest);
+  }
+});

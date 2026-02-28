@@ -1,0 +1,168 @@
+Test Document for Asian ID Detection
+=======================================
+
+SINGAPORE
+---------
+NRIC: S1234567D (valid checksum)
+FIN: G9876543M (valid checksum)
+Passport: K1234567A
+Phone: +65 91234567
+Phone: 81234567
+Postal Code: 123456
+
+CHINA
+-----
+National ID: 110101199003071234 (Beijing, born 1990-03-07)
+Passport: E12345678
+Passport: G87654321
+
+HONG KONG
+---------
+HKID: A123456(7)
+HKID: AB987654(3)
+Passport: K1234567
+Passport: H87654321
+
+TAIWAN
+------
+National ID: A123456789
+Passport: 123456789
+
+JAPAN
+-----
+My Number: 1234 5678 9012
+My Number: 1234-5678-9012
+Passport: TK1234567
+
+SOUTH KOREA
+-----------
+RRN: 900101-1234567 (born 1990-01-01, male)
+RRN: 950315 2987654 (born 1995-03-15, female)
+Passport: M12345678
+
+MALAYSIA
+--------
+MyKad: 900101-14-1234 (born 1990-01-01, Johor)
+MyKad: 850315 10 5678 (born 1985-03-15, Selangor)
+Passport: A12345678
+
+THAILAND
+--------
+National ID: 1-2345-67890-12-3
+National ID: 1234567890123
+Passport: A1234567
+
+INDONESIA
+---------
+KTP: 1234567890123456
+Passport: A1234567
+Passport: B7654321
+
+PHILIPPINES
+-----------
+UMID: 1234-5678901-2
+Passport: P1234567A
+Passport: E7654321
+
+VIETNAM
+-------
+CMND: 123456789 (9 digits, old format)
+CCCD: 123456789012 (12 digits, new format)
+Passport: B1234567
+Passport: C7654321
+
+INDIA
+-----
+Aadhaar: 1234 5678 9012
+Aadhaar: 123456789012
+PAN: ABCDE1234F
+Passport: A1234567
+
+PAKISTAN
+--------
+CNIC: 12345-1234567-1
+CNIC: 12345 1234567 1
+Passport: AB1234567
+
+BANGLADESH
+----------
+NID: 1234567890 (10 digits, old)
+NID: 12345678901234 (14 digits, new)
+NID: 1234567890123 (13 digits, old smart)
+Passport: A1234567
+
+MYANMAR
+-------
+NRC: 12/ABC(N)123456
+
+SRI LANKA
+---------
+NIC: 123456789V
+NIC: 987654321X
+
+NEPAL
+-----
+Citizenship: 12-34-56789
+Citizenship: 123 456 7890123
+
+CAMBODIA
+--------
+National ID: 123456789
+
+LAOS
+----
+National ID: 1234567890123
+
+MIXED CONTEXT TEST
+------------------
+John Smith from Singapore (NRIC: S1234567D) works with Li Wei from China (ID: 110101199003071234).
+They collaborate with Maria Santos from Philippines (Passport: P1234567A) and Rajesh Kumar from India (Aadhaar: 1234 5678 9012).
+
+Contact: john.smith@example.com, Phone: +65 91234567
+DOB: 01/01/1990
+Date of Birth: January 15, 1985
+Gender: Male
+Sex: Female
+Address: Blk 123 Orchard Road #12-34 Singapore 238858
+
+SAMPLE ADDRESSES
+----------------
+Singapore: Blk 456 Ang Mo Kio Avenue 3 #05-678 Singapore 560456
+Hong Kong: Flat 12A, 25/F, Hong Kong Plaza, 188 Connaught Road West, Hong Kong
+China: Room 1234, Building A, No. 100 Nanjing Road, Jing'an District, Shanghai
+中国地址: 上海市浦东新区世纪大道1000号东方明珠大厦5楼503室
+
+CORPORATE REGISTRATIONS
+-----------------------
+Singapore Company:
+  Name: TechStart Innovation Pte Ltd
+  UEN: 201234567A
+  Director: Tan Wei Ming (NRIC: S1234567D)
+  Address: Blk 71 Ayer Rajah Crescent #01-23 Singapore 139951
+
+Hong Kong Company:
+  Name: Global Trading Limited
+  BR: 12345678-000
+  Director: Wong Chi Ming (HKID: A123456(7))
+  Address: Flat 15B, 28/F, Central Plaza, Hong Kong
+
+China Company:
+  公司: 上海科技有限公司
+  统一社会信用代码: 91310000123456789X
+  法人: 李明 (身份证: 310101199005151234)
+  地址: 上海市浦东新区世纪大道1000号
+
+EDGE CASES
+----------
+Incomplete numbers that should NOT match:
+- Short: 123456 (could be SG postal code)
+- Partial NRIC: S123456 (missing check digit)
+- Random digits: 12345 (too short)
+
+Numbers in different contexts:
+- Invoice #: 1234567890123456 (might match Indonesia KTP - acceptable)
+- Reference: AB1234567 (might match Pakistan passport - acceptable)
+- Code: 123456789V (might match Sri Lanka NIC - acceptable)
+
+NOTE: We err on the side of caution - better to detect something that might be an ID
+than to miss an actual ID. Users can review and adjust detections.

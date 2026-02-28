@@ -1,0 +1,16 @@
+{
+  "name": "chrome-store-assets",
+  "version": "1.0.0",
+  "description": "This folder contains HTML templates for generating screenshots and promotional tiles for the Chrome Web Store.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "puppeteer": "^24.37.5"
+  }
+}

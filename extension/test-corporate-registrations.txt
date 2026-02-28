@@ -1,0 +1,232 @@
+Corporate Registration Numbers Test File
+Singapore, Hong Kong, and China
+=========================================
+
+SINGAPORE UEN (Unique Entity Number)
+=====================================
+
+Format 1: Businesses (9 digits + letter)
+-----------------------------------------
+UEN: 201234567A
+UEN: 199812345B
+UEN: 202345678K
+Business Reg: 198765432M
+
+Format 2: Local Companies (8 digits + letter)
+----------------------------------------------
+Company UEN: 53012345K
+Registration: 12345678A
+UEN: 98765432Z
+
+Format 3: Government/Statutory Boards (T/S prefix)
+---------------------------------------------------
+UEN: T08LL1234A
+UEN: S08LL5678B
+Registration: T12GA9999C
+Gov UEN: S99SS0001D
+
+Mixed Context:
+--------------
+ABC Pte Ltd (UEN: 201234567A) located at Blk 123 Orchard Road #12-34 Singapore 238858
+XYZ Holdings (53012345K) - Contact: +65 91234567
+Tech Startup (T08LL1234A) - Email: info@techstartup.sg
+
+CHINA USCC (Unified Social Credit Code / 统一社会信用代码)
+=========================================================
+
+Standard Format (18 characters - letters and numbers):
+-------------------------------------------------------
+USCC: 91110000000000000A
+统一社会信用代码: 911101085568326552
+Credit Code: 91310000123456789X
+Registration: 92440300MA5D12345
+
+Chinese Labels:
+---------------
+企业名称: 北京科技有限公司
+统一社会信用代码: 91110108556832655
+注册号: 92440300MA5D12345
+营业执照号: 911101085568326552
+
+Mixed Context:
+--------------
+Shanghai Tech Co., Ltd.
+Unified Social Credit Code: 91310000123456789X
+Address: Room 1508, Building A, No. 100 Nanjing Road, Jing'an District, Shanghai
+Legal Representative: Li Ming
+ID Card: 310101199005151234
+
+Guangzhou Trading Co.
+统一社会信用代码: 92440300MA5D12345
+地址: 广东省广州市天河区天河路208号天河城广场3201室
+法定代表人: 陈伟
+身份证号: 440101198506151234
+
+HONG KONG BR (Business Registration Number)
+============================================
+
+Standard Format (8 digits):
+----------------------------
+BR: 12345678
+Business Reg No: 87654321
+Registration: 11223344
+BR No.: 99887766
+
+Format with Suffix (8 digits - 3 digits):
+------------------------------------------
+BR: 12345678-000
+Business Reg: 87654321-001
+Registration No: 11223344-999
+
+Mixed Context:
+--------------
+ABC Trading Limited
+Business Registration No: 12345678
+Address: Flat 15B, 28/F, Central Plaza, 18 Harbour Road, Wan Chai, Hong Kong
+Contact: +852 91234567
+
+XYZ Holdings Ltd.
+BR: 87654321-001
+HKID: A123456(7)
+Address: Room 2001, 20/F, Times Square, 1 Matheson Street, Causeway Bay
+
+Tech Innovations HK
+Registration: 11223344
+Office: 12/F, Hopewell Centre, 183 Queen's Road East
+Director: Wong Chi Ming (HKID: AB987654(3))
+
+COMBINED EXAMPLES - Multi-Country Companies
+============================================
+
+Example 1: Regional Headquarters
+---------------------------------
+Company Name: Asia Pacific Holdings Group
+
+Singapore Entity:
+  Name: Asia Pacific Holdings Pte Ltd
+  UEN: 201234567A
+  Address: Blk 456 Orchard Road #25-01 Singapore 238858
+  Contact: +65 91234567
+
+Hong Kong Entity:
+  Name: Asia Pacific Holdings Limited
+  BR: 12345678-000
+  Address: Unit 2501, 25/F, Central Plaza, 18 Harbour Road, Wan Chai
+  Contact: +852 91234567
+
+China Entity:
+  Name: 亚太控股有限公司
+  USCC: 91310000123456789X
+  Address: 上海市浦东新区世纪大道1000号东方明珠大厦25楼
+  Contact: 13912345678
+
+Example 2: Technology Startup
+------------------------------
+TechStart Innovation
+
+Singapore:
+  UEN: T08LL1234A
+  Founders:
+    - Tan Wei Ming (NRIC: S1234567D)
+    - Rajesh Kumar (FIN: G9876543M)
+  Address: Blk 71 Ayer Rajah Crescent #01-23 Singapore 139951
+
+Hong Kong R&D Office:
+  BR: 87654321
+  Director: Wong Chi Keung (HKID: A123456(7))
+  Address: 12/F, Cyberport 3, 100 Cyberport Road
+
+China Manufacturing:
+  统一社会信用代码: 92440300MA5D12345
+  法人: 李晓明 (身份证: 440101199005151234)
+  地址: 深圳市南山区科技园南区深圳湾科技生态园10栋A座
+
+Example 3: Retail Chain
+------------------------
+Global Retail Co.
+
+Singapore Stores (HQ):
+  Company: Global Retail Singapore Pte Ltd
+  UEN: 53012345K
+  CEO: Sarah Lim (NRIC: S7654321B)
+  Address: #15-01 Suntec Tower One, 7 Temasek Boulevard, Singapore 038987
+
+Hong Kong Branch:
+  Company: Global Retail (HK) Ltd
+  BR: 11223344-999
+  Manager: Chan Tai Man (HKID: AB123456(7))
+  Office: Flat 20A, 15/F, Tower 1, Times Square, Causeway Bay
+
+China Operations:
+  公司: 环球零售（中国）有限公司
+  统一社会信用代码: 911101085568326552
+  总经理: 王强 (身份证: 110101198806151234)
+  办公室: 北京市朝阳区建国路88号SOHO现代城B座15楼
+
+EDGE CASES
+==========
+
+Should Detect:
+--------------
+Valid UEN: 201234567A ✅
+Valid USCC: 91110000000000000A ✅
+Valid BR: 12345678 ✅
+Valid BR with suffix: 12345678-000 ✅
+
+Should NOT Detect (False Positives):
+-------------------------------------
+Short number: 12345 ❌
+Random 8 digits in date: 20231215 (might match BR, acceptable false positive)
+Phone number: 91234567 (might match BR segment, but context different)
+Random 18 chars: ABCDEFGHIJ12345678 (might match USCC if all valid chars)
+
+Note: Some false positives are acceptable (better to detect than miss).
+Corporate registration numbers are less distinct than personal IDs.
+Context-based filtering can be added later if needed.
+
+BILINGUAL EXAMPLES
+==================
+
+Singapore Chinese Company:
+--------------------------
+公司名称: 新加坡科技有限公司
+Singapore Tech Pte Ltd
+UEN: 201234567A
+地址: Blk 123 Tanjong Pagar Road #15-01 Singapore 088532
+Address: 新加坡丹绒巴葛路123座15-01室 邮编088532
+联系电话: +65 91234567
+
+Hong Kong Bilingual:
+--------------------
+公司名称: 香港贸易有限公司
+Hong Kong Trading Limited
+BR: 12345678-001
+地址: 九龍旺角道32號帝京大厦15樓A室
+Address: Flat A, 15/F, Metro Tower, 32 Mongkok Road, Kowloon
+電話: +852 91234567
+
+China English Name:
+-------------------
+Company: Beijing Innovation Technology Co., Ltd.
+公司: 北京创新科技有限公司
+USCC: 91110108556832655X
+统一社会信用代码: 91110108556832655X
+Address: Room 1501, COFCO Plaza, 8 Jianguomen Inner Street, Beijing
+地址: 北京市东城区建国门内大街8号中粮广场1501室
+
+EXPECTED DETECTION COUNTS
+==========================
+
+Singapore UEN: ~15-20
+China USCC: ~15-20
+Hong Kong BR: ~15-20
+
+Total Expected: ~45-60 corporate registration detections
+
+Plus all previously supported PII types:
+- Names, emails, phones
+- National IDs, passports
+- Addresses
+- Chinese PII (姓名, 身份证, etc.)
+
+Total Document PII: ~100-150 detections

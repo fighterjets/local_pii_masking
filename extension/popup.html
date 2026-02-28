@@ -1,0 +1,2373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local PII Masking</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    body {
+      display: flex;
+      align-items: stretch;
+      width: auto;
+      height: 100vh;
+      overflow: hidden;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.6;
+    }
+
+    .main-panel {
+      width: 600px;
+      min-width: 360px;
+      max-width: 600px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #panelResizer {
+      width: 5px;
+      flex-shrink: 0;
+      cursor: col-resize;
+      background: #e2e8f0;
+      transition: background 0.15s;
+      position: relative;
+      z-index: 10;
+    }
+
+    #panelResizer:hover,
+    #panelResizer.dragging {
+      background: #2563eb;
+    }
+
+    .editor-panel {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      padding: 0.75rem;
+      gap: 0.4rem;
+      overflow: hidden;
+    }
+
+    /* ── Editor placeholder ───────────────────────────────── */
+    #editorPlaceholder {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 1.5rem 1rem;
+      overflow: hidden;
+    }
+
+    .ep-header {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .ep-shield {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .ep-tagline strong {
+      display: block;
+      font-size: 1.05rem;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+    }
+
+    .ep-tagline span {
+      font-size: 0.78rem;
+      color: #64748b;
+    }
+
+    /* mock document card */
+    .ep-demo {
+      width: 100%;
+      max-width: 420px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .ep-demo-label {
+      padding: 0.45rem 0.85rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      border-bottom: 1px solid #e2e8f0;
+      background: #fff;
+    }
+
+    .ep-demo-doc {
+      padding: 0.9rem 1rem;
+      font-size: 0.8rem;
+      line-height: 1.75;
+      color: #334155;
+    }
+
+    .ep-demo-doc p { margin-bottom: 0.35rem; }
+
+    /* PII highlight spans in demo */
+    .ep-mark {
+      position: relative;
+      display: inline-block;
+      border-radius: 3px;
+      padding: 0 2px;
+      font-weight: 500;
+      cursor: default;
+    }
+
+    .ep-mark-person  { background: #dbeafe; color: #1d4ed8; }
+    .ep-mark-email   { background: #d1fae5; color: #065f46; }
+    .ep-mark-phone   { background: #fef3c7; color: #92400e; }
+    .ep-mark-id      { background: #f3e8ff; color: #6b21a8; }
+    .ep-mark-address { background: #ccfbf1; color: #134e4a; }
+
+    .ep-tag {
+      position: absolute;
+      top: -17px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      padding: 1px 5px;
+      border-radius: 3px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .ep-mark:hover .ep-tag    { opacity: 1; }
+    .ep-mark-person .ep-tag   { background: #1d4ed8; color: #fff; }
+    .ep-mark-email .ep-tag    { background: #065f46; color: #fff; }
+    .ep-mark-phone .ep-tag    { background: #92400e; color: #fff; }
+    .ep-mark-id .ep-tag       { background: #6b21a8; color: #fff; }
+    .ep-mark-address .ep-tag  { background: #134e4a; color: #fff; }
+
+    /* feature grid */
+    .ep-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .ep-feat {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.5rem 0.7rem;
+      border-radius: 8px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      font-size: 0.75rem;
+      color: #475569;
+    }
+
+    .ep-feat span:first-child { font-size: 1rem; line-height: 1; }
+
+    /* upload hint */
+    .ep-cta {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      letter-spacing: 0.01em;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white;
+      padding: 16px 20px;
+      min-height: 64px;
+    }
+
+    .header-content {
+      display: none;
+    }
+
+    .header-content.active {
+      display: block;
+    }
+
+    /* Default state - Title view */
+    .header-default h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-default p {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    /* File loaded state - File info view */
+    .header-file {
+      display: none;
+    }
+
+    .header-file.active {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .file-info-icon {
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .file-info-details h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 280px;
+    }
+
+    .file-info-details p {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .container {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      color: #2563eb;
+    }
+
+    .upload-section {
+      padding: 0 20px 20px;
+    }
+
+    .upload-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 48px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #f8fafc;
+      margin-bottom: 20px;
+    }
+
+    .upload-zone:hover {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      line-height: 1;
+    }
+
+    .upload-zone h3 {
+      font-size: 16px;
+      color: #1e293b;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .upload-zone p {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    /* Feature list */
+    .features-list {
+      margin-top: 8px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .feature-item:last-child {
+      border-bottom: none;
+    }
+
+    .feature-check {
+      width: 20px;
+      height: 20px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .feature-item span {
+      font-size: 14px;
+      color: #334155;
+    }
+
+    .file-info {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      background: #f8fafc;
+      margin-top: 16px;
+    }
+
+    .file-info .upload-icon {
+      font-size: 24px;
+      margin-bottom: 0;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px);
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #059669;
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .status {
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin: 0.75rem 0;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #2563eb;
+    }
+
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+    }
+
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
+    }
+
+    .progress {
+      margin: 0.75rem 0;
+      display: none;
+      padding: 0.75rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 4px;
+      color: #1e40af;
+      font-weight: 500;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: #dbeafe;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #2563eb);
+      width: 0%;
+      transition: width 0.3s ease-out;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .results {
+      display: none;
+    }
+
+    .summary-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .summary-card {
+      padding: 0.3rem 0.6rem;
+      background: #f8fafc;
+      border-radius: 4px;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+
+    .summary-card.enabled {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .summary-card.enabled .summary-value { color: #2563eb; }
+    .summary-card.enabled .summary-label { color: #1e40af; }
+
+    .summary-card.disabled {
+      border-color: #cbd5e1;
+      background: #f1f5f9;
+      opacity: 0.5;
+    }
+
+    .summary-card.disabled .summary-value { color: #94a3b8; }
+    .summary-card.disabled .summary-label { color: #94a3b8; }
+
+    .summary-card:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+
+    .summary-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .summary-label {
+      font-size: 0.75rem;
+    }
+
+    .summary-preview { display: none; }
+
+    .redaction-counter {
+      text-align: center;
+      font-size: 0.82rem;
+      color: #2563eb;
+      padding: 0.3rem 0 0.5rem;
+      font-weight: 500;
+    }
+
+    .redaction-counter.partial { color: #d97706; }
+    .redaction-counter.none    { color: #dc2626; }
+
+    /* Detection Summary Banner */
+    .detection-banner {
+      padding: 16px 20px;
+      background: #fef3c7;
+      border-bottom: 1px solid #fde68a;
+      margin: -1rem -1rem 16px -1rem;
+    }
+
+    .detection-banner-title {
+      font-size: 13px;
+      color: #92400e;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    /* Stats Row */
+    .stats-row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .stat-item {
+      text-align: center;
+      flex: 1;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: 700;
+      color: #b45309;
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #a16207;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    /* Detection Item Cards */
+    .detection-item {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .detection-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .detection-type {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .detection-type-icon {
+      font-size: 14px;
+    }
+
+    .detection-value {
+      font-family: 'SF Mono', monospace;
+      font-size: 13px;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 4px 8px;
+      border-radius: 4px;
+      word-break: break-all;
+    }
+
+    .detection-meta {
+      color: #64748b;
+      font-size: 0.8rem;
+    }
+
+    /* Updated Confidence Badges - Pill Style */
+    .confidence-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .confidence-badge.high {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .confidence-badge.medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .confidence-badge.low {
+      background: #f3f4f6;
+      color: #4b5563;
+    }
+
+    /* Success State Components */
+    .success-header {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: white;
+      padding: 16px 20px;
+      margin: -1rem -1rem 16px -1rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .success-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .success-text h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .success-text p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .redaction-summary {
+      padding: 16px 20px;
+      background: #ecfdf5;
+      border-bottom: 1px solid #a7f3d0;
+      margin: 0 -20px 16px;
+    }
+
+    .redaction-summary h4 {
+      font-size: 13px;
+      color: #065f46;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .redaction-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .redaction-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #065f46;
+    }
+
+    .redaction-item-icon {
+      font-size: 14px;
+    }
+
+    .file-preview-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .file-preview-icon {
+      width: 48px;
+      height: 48px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .file-preview-info h5 {
+      font-size: 14px;
+      color: #1e293b;
+      margin-bottom: 2px;
+      font-weight: 600;
+    }
+
+    .file-preview-info p {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .security-note {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .model-status {
+      padding: 0.5rem;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      display: none;
+    }
+
+    .model-status.active {
+      display: block;
+    }
+
+    .footer {
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .footer p {
+      margin: 4px 0;
+    }
+
+    .footer a {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      background: #10b981;
+      color: white;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      margin: 0 0.25rem;
+    }
+
+    /* Confidence badges */
+    .confidence-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+
+    .confidence-badge.high {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .confidence-badge.medium {
+      background-color: #FF9800;
+      color: white;
+    }
+
+    .confidence-badge.low {
+      background-color: #9E9E9E;
+      color: white;
+    }
+
+    /* History Section — no cap; main panel container scrolls */
+    .history {
+    }
+
+    .history-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      margin: 0 -20px 16px;
+    }
+
+    .history-header-row h2 {
+      margin: 0;
+    }
+
+    /* Stats Cards Row */
+    .stats-cards {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      flex: 1;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stat-card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .stat-card-icon.blue { background: #dbeafe; }
+    .stat-card-icon.green { background: #d1fae5; }
+    .stat-card-icon.purple { background: #f3e8ff; }
+
+    .stat-card-info h3 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+
+    .stat-card-info p {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-sm {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .history-list {
+      overflow-y: visible;
+    }
+
+    .history-empty {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+    .history-error {
+      text-align: center;
+      padding: 1rem;
+      color: #991b1b;
+      background: #fee2e2;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .history-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      background: white;
+      transition: box-shadow 0.2s;
+    }
+
+    .history-item:hover {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .history-header {
+      padding: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-main {
+      flex: 1;
+    }
+
+    .history-main strong {
+      display: block;
+      font-size: 0.9rem;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+      word-break: break-all;
+    }
+
+    .history-meta {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .history-date {
+      font-size: 0.75rem;
+      color: #64748b;
+      text-align: right;
+    }
+
+    .history-details {
+      padding: 0 0.75rem 0.75rem 0.75rem;
+      border-top: 1px solid #f1f5f9;
+      font-size: 0.85rem;
+    }
+
+    .history-detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.25rem 0;
+      gap: 1rem;
+    }
+
+    .history-detail-row .label {
+      font-weight: 500;
+      color: #64748b;
+      min-width: 120px;
+    }
+
+    .history-detail-row span:last-child {
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .history-detections {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .history-detections strong {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #2563eb;
+    }
+
+    /* Compliance Banner */
+    .compliance-banner {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: #eff6ff;
+      border: 1px solid #dbeafe;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #1e40af;
+    }
+
+    .compliance-banner strong {
+      color: #1e3a8a;
+    }
+
+    .detection-summary-empty {
+      color: #64748b;
+      font-style: italic;
+      font-size: 0.8rem;
+    }
+
+    .detection-summary-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .detection-summary-item {
+      background: rgba(37, 99, 235, 0.05);
+      border: 1px solid #dbeafe;
+      border-radius: 4px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .detection-type {
+      font-weight: 600;
+      color: #2563eb;
+    }
+
+    .detection-count {
+      color: #64748b;
+    }
+
+    .detection-confidence {
+      color: #10b981;
+      font-weight: 500;
+    }
+
+    /* Setup / install card */
+    .setup-intro {
+      font-size: 0.9rem;
+      color: #475569;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .setup-size {
+      font-weight: 400;
+      color: #64748b;
+    }
+
+    .setup-note {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    .model-install-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .model-install-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .model-install-info strong {
+      font-size: 0.9rem;
+    }
+
+    .install-progress {
+      margin: 0.4rem 0 0.75rem;
+    }
+
+    .install-progress-label {
+      font-size: 0.8rem;
+      color: #475569;
+      margin-bottom: 0.25rem;
+    }
+
+    .install-progress-bar {
+      height: 6px;
+      background: #dbeafe;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .install-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #2563eb);
+      width: 0%;
+      transition: width 0.2s;
+    }
+
+    .model-installed {
+      color: #065f46;
+      font-weight: 500;
+      font-size: 0.85rem;
+    }
+
+    .network-settings-toggle {
+      background: none;
+      border: none;
+      color: #2563eb;
+      font-size: 0.82rem;
+      cursor: pointer;
+      padding: 0.35rem 0;
+      margin-top: 0.25rem;
+      text-align: left;
+      display: block;
+    }
+
+    .network-settings-toggle:hover { text-decoration: underline; }
+
+    .network-settings-panel {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 0.75rem;
+      margin: 0.35rem 0 0.5rem;
+    }
+
+    .network-settings-panel label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #475569;
+      margin-bottom: 0.3rem;
+    }
+
+    .network-settings-panel input[type="url"] {
+      width: 100%;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-family: monospace;
+      margin-bottom: 0.5rem;
+    }
+
+    .network-settings-note {
+      font-size: 0.75rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* Category tabs */
+    .category-tabs {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+
+    .cat-tab {
+      padding: 0.25rem 0.6rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      background: white;
+      color: #475569;
+      transition: all 0.15s;
+    }
+
+    .cat-tab:hover { background: #f1f5f9; }
+    .cat-tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+    .cat-tab.has-low { border-color: #f59e0b; color: #92400e; }
+    .cat-tab.active.has-low { background: #d97706; border-color: #d97706; color: white; }
+
+    /* PII Risk Grade card */
+    .grade-card {
+      border-radius: 8px;
+      padding: 0.7rem 0.9rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+      border: 1.5px solid transparent;
+    }
+    .grade-badge {
+      flex-shrink: 0;
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      line-height: 1.1;
+      text-align: center;
+    }
+    .grade-body { flex: 1; min-width: 0; }
+    .grade-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 0.18rem; }
+    .grade-desc  { font-size: 0.77rem; margin-bottom: 0.3rem; line-height: 1.4; }
+    .grade-meta  { font-size: 0.73rem; opacity: 0.85; }
+    .grade-drivers { display: flex; flex-wrap: wrap; gap: 0.28rem; margin: 0.3rem 0; }
+    .grade-driver-chip {
+      font-size: 0.69rem;
+      padding: 0.08rem 0.4rem;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .grade-RESTRICTED  { background: #fef2f2; border-color: #fca5a5; }
+    .grade-RESTRICTED  .grade-badge  { background: #dc2626; color: white; }
+    .grade-RESTRICTED  .grade-title  { color: #991b1b; }
+    .grade-RESTRICTED  .grade-desc,
+    .grade-RESTRICTED  .grade-meta   { color: #b91c1c; }
+    .grade-RESTRICTED  .grade-driver-chip { background: #fecaca; color: #991b1b; }
+
+    .grade-CONFIDENTIAL { background: #fff7ed; border-color: #fed7aa; }
+    .grade-CONFIDENTIAL .grade-badge  { background: #ea580c; color: white; }
+    .grade-CONFIDENTIAL .grade-title  { color: #9a3412; }
+    .grade-CONFIDENTIAL .grade-desc,
+    .grade-CONFIDENTIAL .grade-meta   { color: #c2410c; }
+    .grade-CONFIDENTIAL .grade-driver-chip { background: #fed7aa; color: #9a3412; }
+
+    .grade-INTERNAL { background: #fffbeb; border-color: #fde68a; }
+    .grade-INTERNAL .grade-badge  { background: #d97706; color: white; }
+    .grade-INTERNAL .grade-title  { color: #92400e; }
+    .grade-INTERNAL .grade-desc,
+    .grade-INTERNAL .grade-meta   { color: #b45309; }
+    .grade-INTERNAL .grade-driver-chip { background: #fde68a; color: #92400e; }
+
+    .grade-PUBLIC { background: #f0fdf4; border-color: #bbf7d0; }
+    .grade-PUBLIC .grade-badge  { background: #16a34a; color: white; }
+    .grade-PUBLIC .grade-title  { color: #14532d; }
+    .grade-PUBLIC .grade-desc,
+    .grade-PUBLIC .grade-meta   { color: #15803d; }
+    .grade-PUBLIC .grade-driver-chip { background: #bbf7d0; color: #14532d; }
+
+    /* Card collapse/expand toggle */
+    .card-toggle {
+      float: right;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 4px;
+      color: #94a3b8;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 4px;
+      transition: color 0.15s;
+      line-height: 1;
+      margin-top: 2px;
+    }
+    .card-toggle:hover { color: #334155; }
+    .card-toggle svg { transition: transform 0.2s ease; }
+    .card.card-collapsed .card-toggle svg { transform: rotate(-90deg); }
+    .card-body { /* shown by default */ }
+    .card.card-collapsed .card-body { display: none; }
+
+    /* Detection list container — no height cap; main panel container scrolls */
+    .detections-scroll {
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Detection row */
+    .detection-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    .detection-row:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .detection-row.excluded { opacity: 0.6; }
+    .detection-row.excluded .det-body { opacity: 0.5; } 
+    .detection-row.type-hidden { display: none; }
+
+    .det-checkbox { margin-top: 3px; flex-shrink: 0; cursor: pointer; }
+
+    .det-body { flex: 1; min-width: 0; }
+
+    .det-header { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+
+    .det-context {
+      font-family: monospace;
+      font-size: 0.76rem;
+      color: #475569;
+      margin-top: 0.25rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+
+    .det-context mark {
+      background: #fef08a;
+      border-radius: 2px;
+      padding: 0 2px;
+      color: #1e293b;
+      font-weight: 600;
+    }
+
+    /* Bulk action bar */
+    .detection-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.5rem 0 0.4rem;
+      font-size: 0.82rem;
+    }
+
+    .det-count-label { flex: 1; color: #64748b; }
+
+    #qwenSection {
+      border: 1px solid #ddd6fe;
+      border-radius: 6px;
+      padding: 0.65rem 0.75rem;
+      background: #faf5ff;
+      margin: 0 0 0.75rem;
+    }
+
+    .qwen-section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid #ede9fe;
+    }
+
+    .qwen-section-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4c1d95;
+    }
+
+    .qwen-section-badge {
+      font-size: 0.7rem;
+      background: #ede9fe;
+      color: #6d28d9;
+      border-radius: 999px;
+      padding: 0.1rem 0.45rem;
+      font-weight: 500;
+    }
+
+    .qwen-results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .qwen-result-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.76rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+    }
+
+    .qwen-result-row.qwen-confirmed  { border-color: #bbf7d0; background: #f0fdf4; }
+    .qwen-result-row.qwen-discarded  { border-color: #fecaca; background: #fef2f2; }
+    .qwen-result-row.qwen-reviewing  { border-color: #bfdbfe; background: #eff6ff; }
+
+    .qwen-result-value {
+      font-weight: 600;
+      color: #1e293b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 130px;
+    }
+
+    .qwen-result-type {
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      background: #f1f5f9;
+      color: #475569;
+      padding: 0.05rem 0.3rem;
+      border-radius: 3px;
+    }
+
+    .qwen-result-label {
+      margin-left: auto;
+      flex-shrink: 0;
+      color: #64748b;
+    }
+
+
+    /* Local Training card */
+    .corrections-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .corrections-badge {
+      font-size: 0.72rem;
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 0.1rem 0.45rem;
+      font-weight: 500;
+      margin-left: 0.4rem;
+    }
+
+    .corrections-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .corrections-empty {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      font-style: italic;
+      padding: 0.25rem 0;
+    }
+
+    .correction-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      padding: 0.3rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #f8fafc;
+    }
+
+    .correction-type {
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .correction-values {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .correction-original  { color: #94a3b8; text-decoration: line-through; }
+    .correction-arrow     { color: #94a3b8; margin: 0 0.2rem; }
+    .correction-corrected { color: #15803d; font-weight: 600; }
+    .correction-suppressed { color: #dc2626; font-weight: 600; }
+
+    .correction-action {
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .correction-count {
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      background: #f1f5f9;
+      color: #64748b;
+      padding: 0.05rem 0.3rem;
+      border-radius: 999px;
+    }
+
+    .correction-delete {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: #cbd5e1;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .correction-delete:hover { color: #ef4444; }
+
+    /* Editor toolbar */
+    .editor-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #64748b;
+      padding: 0 0.1rem;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+
+    .editor-title { font-weight: 600; color: #475569; }
+
+    .editor-toolbar-right { display: flex; align-items: center; gap: 0.5rem; }
+
+    .editor-legend { display: flex; align-items: center; gap: 0.3rem; }
+
+    .legend-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      vertical-align: middle;
+    }
+    .legend-green  { background: #86efac; }
+    .legend-yellow { background: #fde68a; }
+
+    /* Document editor pane */
+    #documentEditor {
+      flex: 1;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 0.5rem 0.6rem;
+      overflow-y: auto;
+      min-height: 0;
+      font-size: 0.8rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      outline: none;
+      background: #fff;
+      color: #1e293b;
+      font-family: inherit;
+      caret-color: #2563eb;
+    }
+
+    #documentEditor:empty::before {
+      content: 'Upload a document to preview it here.';
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    /* Detection highlight spans */
+    .det-highlight {
+      position: relative;
+      display: inline-block;
+      vertical-align: baseline;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .det-highlight.checked {
+      background: #bbf7d0;
+    }
+
+    #documentEditor.masked-view .det-highlight.will-mask.checked {
+      background: #bfdbfe;
+    }
+
+    .det-highlight.unchecked {
+      background: #fef08a;
+      text-decoration: line-through;
+      text-decoration-color: #dc2626;
+      text-decoration-thickness: 1.5px;
+    }
+
+    /* Dismiss (X) button on each highlight */
+    .det-dismiss {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #94a3b8;
+      color: #fff;
+      border: 1.5px solid #fff;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 11px;
+      text-align: center;
+      padding: 0;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s, background 0.12s;
+      z-index: 1;
+    }
+
+    .det-dismiss:hover {
+      background: #ef4444;
+    }
+
+    /* Show X only when hovering a checked (green) mark */
+    .det-highlight.checked:hover .det-dismiss {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Persistent active-selection highlight */
+    .det-highlight.det-active {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+      border-radius: 3px;
+    }
+
+    .detection-row.det-active {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+
+    /* Detection type icons */
+    .detection-icon {
+      font-size: 14px;
+      margin-right: 4px;
+    }
+
+    /* Drag-to-resize handles — shown on highlight hover */
+    .det-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      cursor: ew-resize;
+      z-index: 2;
+      opacity: 0;
+      background: rgba(37, 99, 235, 0.45);
+      transition: opacity 0.1s;
+    }
+
+    .det-handle-left  { left: 0;  border-radius: 2px 0 0 2px; }
+    .det-handle-right { right: 0; border-radius: 0 2px 2px 0; }
+
+    .det-highlight:hover .det-handle { opacity: 1; }
+    .det-handle:hover { background: rgba(37, 99, 235, 0.75); }
+
+    /* Manual detection — dashed outline so user can tell it was hand-added */
+    .det-highlight.manual-det {
+      outline: 1.5px dashed #7c3aed;
+      outline-offset: 1px;
+    }
+
+    /* Manual badge in detection row */
+    .manual-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #6d28d9;
+      background: #ede9fe;
+      border: 1px solid #c4b5fd;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+
+    /* Remove button in manual detection rows */
+    .det-manual-remove {
+      flex-shrink: 0;
+      align-self: center;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 2px 5px;
+      border-radius: 3px;
+      transition: color 0.1s, background 0.1s;
+    }
+
+    .det-manual-remove:hover {
+      color: #ef4444;
+      background: #fee2e2;
+    }
+
+    /* Formatted mode: mammoth HTML element styling */
+    #documentEditor.formatted-mode {
+      white-space: normal;
+    }
+
+    #documentEditor.formatted-mode p { margin: 0 0 0.45em; }
+    #documentEditor.formatted-mode strong, #documentEditor.formatted-mode b { font-weight: 700; }
+    #documentEditor.formatted-mode em, #documentEditor.formatted-mode i { font-style: italic; }
+    #documentEditor.formatted-mode u { text-decoration: underline; }
+    #documentEditor.formatted-mode h1 { font-size: 1.05em; font-weight: 700; margin: 0.5em 0 0.25em; }
+    #documentEditor.formatted-mode h2 { font-size: 0.95em; font-weight: 700; margin: 0.4em 0 0.2em; }
+    #documentEditor.formatted-mode h3 { font-size: 0.88em; font-weight: 700; margin: 0.3em 0 0.15em; }
+    #documentEditor.formatted-mode ul,
+    #documentEditor.formatted-mode ol { margin: 0.25em 0 0.25em 1.4em; }
+    #documentEditor.formatted-mode li { margin: 0.1em 0; }
+    #documentEditor.formatted-mode table {
+      border-collapse: collapse;
+      margin: 0.5em 0;
+      font-size: 0.77rem;
+      width: 100%;
+    }
+    #documentEditor.formatted-mode td,
+    #documentEditor.formatted-mode th {
+      border: 1px solid #cbd5e1;
+      padding: 0.2em 0.4em;
+      vertical-align: top;
+    }
+    #documentEditor.formatted-mode th {
+      background: #f1f5f9;
+      font-weight: 600;
+    }
+
+    /* PDF canvas editor mode */
+    #documentEditor.pdf-canvas-mode {
+      white-space: normal;
+      padding: 0.75rem;
+      background: #e8edf2;
+      cursor: default;
+      user-select: none;
+    }
+
+    .pdf-page-wrapper {
+      position: relative;
+      margin: 0 auto 0.75rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      display: block;
+      line-height: 0;
+    }
+
+    .pdf-page-wrapper canvas { display: block; }
+
+    /* ── PDF.js text layer — transparent selectable text ── */
+    /* Required CSS for renderTextLayer() to position spans correctly */
+    .pdf-text-layer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      line-height: 1;
+      text-size-adjust: none;
+      z-index: 2;
+      pointer-events: all;
+      user-select: text;
+    }
+    .pdf-text-layer span {
+      color: transparent;
+      position: absolute;
+      white-space: pre;
+      cursor: text;
+      transform-origin: 0% 0%;
+    }
+
+    /* ── Highlight layer — sits above text layer so dismiss buttons work ── */
+    .pdf-highlight-layer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .pdf-highlight-box {
+      position: absolute;
+      border-radius: 2px;
+      pointer-events: all;
+      cursor: pointer;
+    }
+    .pdf-highlight-box.checked {
+      background: rgba(250, 204, 21, 0.38);
+      border: 1.5px solid rgba(234, 179, 8, 0.85);
+    }
+    .pdf-highlight-box.unchecked {
+      background: rgba(148, 163, 184, 0.15);
+      border: 1.5px dashed #94a3b8;
+    }
+    .pdf-highlight-box.manual-det {
+      background: rgba(34, 197, 94, 0.3);
+      border: 1.5px solid rgba(22, 163, 74, 0.75);
+    }
+    .pdf-highlight-box:hover { outline: 2px solid #2563eb; }
+
+    /* Type label — floats above box on hover */
+    .pdf-highlight-type {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      font-size: 9px;
+      font-weight: 600;
+      background: rgba(161, 110, 0, 0.92);
+      color: #fff;
+      padding: 1px 5px;
+      border-radius: 2px 2px 0 0;
+      white-space: nowrap;
+      display: none;
+      pointer-events: none;
+      line-height: 1.6;
+    }
+    .pdf-highlight-box:hover .pdf-highlight-type { display: block; }
+
+    /* Dismiss button — top-right corner of each highlight box */
+    .pdf-dismiss-btn {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      width: 15px;
+      height: 15px;
+      background: #dc2626;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .pdf-highlight-box:hover .pdf-dismiss-btn { display: flex; }
+    .pdf-highlight-box.unchecked .pdf-dismiss-btn { background: #16a34a; }
+    .pdf-highlight-box.unchecked .pdf-dismiss-btn::after { content: '↺'; font-size: 8px; }
+    .pdf-highlight-box:not(.unchecked) .pdf-dismiss-btn::after { content: '×'; }
+
+    .pdf-rendering-msg {
+      color: #64748b;
+      font-style: italic;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .det-row-flash { animation: detRowFlash 0.8s ease-out; }
+    @keyframes detRowFlash {
+      0%   { background: #dbeafe; }
+      100% { background: transparent; }
+    }
+
+    /* Floating manual-add toolbar */
+    #manualAddToolbar {
+      display: none;
+      position: fixed;
+      align-items: center;
+      gap: 0.4rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.35rem 0.6rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+      z-index: 200;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    #manualAddToolbar select,
+    #manualAddToolbar input[type="text"] {
+      font-size: 0.78rem;
+      padding: 2px 4px;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
+      background: #f8fafc;
+    }
+
+    #manualAddToolbar input[type="text"] { width: 90px; }
+
+    .hint-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      color: #475569;
+      font-size: 0.65rem;
+      font-weight: 700;
+      cursor: default;
+      vertical-align: middle;
+      margin-left: 0.35rem;
+      position: relative;
+      line-height: 1;
+    }
+
+    .hint-icon .hint-tooltip {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 6px);
+      transform: translateX(-50%);
+      width: 220px;
+      background: #1e293b;
+      color: #f1f5f9;
+      font-size: 0.75rem;
+      font-weight: 400;
+      line-height: 1.45;
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      z-index: 100;
+      pointer-events: none;
+      text-align: left;
+    }
+
+    .hint-icon .hint-tooltip::before {
+      content: '';
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-bottom-color: #1e293b;
+    }
+
+    .hint-icon:hover .hint-tooltip {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-panel">
+  <div class="header">
+    <!-- Default state - shown when no file loaded -->
+    <div class="header-content header-default active" id="headerDefault">
+      <h1>🔒 Local PII Masking</h1>
+      <p>v2.3.5 — 100% Client-side</p>
+    </div>
+    
+    <!-- File loaded state - shown when file is loaded -->
+    <div class="header-file" id="headerFile">
+      <div class="file-info-icon">📄</div>
+      <div class="file-info-details">
+        <h3 id="headerFileName">document.pdf</h3>
+        <p id="headerFileMeta">2.5 MB</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Upload -->
+    <div class="upload-section">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">📁</div>
+        <h3>Drop your document here</h3>
+        <p>Supports PDF, DOCX, and TXT files</p>
+      </div>
+      
+      <!-- Feature list -->
+      <div class="features-list" id="featuresList">
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <span>60+ Asian ID patterns</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <span>English &amp; Chinese NER AI</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <span>Format-preserving DOCX</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <span>Zero data transmission</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-check">✓</div>
+          <span>Works 100% offline</span>
+        </div>
+      </div>
+
+      <div class="file-info" id="fileInfo" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="upload-icon">📄</div>
+            <div style="flex: 1; min-width: 0;">
+              <p id="fileName" style="font-size: 0.9rem; font-weight: 500; margin: 0; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">document.pdf</p>
+              <p id="fileSize" style="font-size: 0.8rem; color: #64748b; margin: 0.25rem 0 0 0;">2.5 MB</p>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
+            <button id="changeFileBtn" class="btn btn-secondary btn-sm">Change File</button>
+            <a id="clearDocumentLink" style="font-size: 0.75rem; color: #94a3b8; cursor: pointer; text-decoration: underline;">Clear
+              document</a>
+            </div>
+        </div>
+      </div>
+
+      <input type="file" id="fileInput" accept=".txt,.pdf,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+
+      <div class="progress" id="progress">
+        <p id="progressText" style="font-size: 0.9rem; margin: 0; font-weight: 500; color: #1e40af;">Processing...</p>
+        <div class="progress-bar" style="margin-top: 0.5rem;">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div id="statusMessage" class="status"></div>
+    </div><!-- /.upload-section -->
+
+    <!-- Configuration -->
+    <div class="card">
+      <h2>Configuration
+        <span class="hint-icon">?
+          <span class="hint-tooltip">
+            <strong>NER</strong> (Named Entity Recognition) — an ML model that identifies names, organisations, and locations
+            in free text.<br><br>
+            <strong>LLM</strong> (Qwen) — a small language model that double-checks uncertain NER detections to reduce false
+            positives.
+          </span>
+        </span><button class="card-toggle" title="Collapse"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </h2>
+      <div class="card-body">
+      <div id="modelStatus" class="model-status">
+        Auto-loading bundled ML models...
+      </div>
+<div class="model-details" id="modelDetails" style="display: none; margin-top: 0.5rem; font-size: 0.9rem;">
+  <div style="margin-bottom: 0.3rem;">
+    <strong>Qwen:</strong> <span id="qwenStatus">Not loaded</span>
+  </div>
+  <div style="margin-bottom: 0.3rem;">
+    <strong>Piiranha:</strong> <span id="englishNerStatus">Not loaded</span>
+  </div>
+  <div>
+    <strong>Chinese NER:</strong> <span id="chineseNerStatus">Not loaded</span>
+  </div>
+</div>
+
+<button id="preloadBtn" class="btn btn-secondary btn-sm" style="display: none;">Retry Loading ML Models</button>
+
+      <label for="maskingStrategy" style="margin-top: 1rem;">Masking Strategy:</label>
+      <select id="maskingStrategy">
+        <option value="SYNTHETIC">Synthetic (Mock data)</option>
+        <option value="REDACTION">Redaction ([REDACTED])</option>
+        <option value="TOKENIZATION">Tokenization ([NAME_1])</option>
+        <option value="PARTIAL">Partial Masking (j***@***.com)</option>
+      </select>
+      </div><!-- /.card-body -->
+    </div>
+
+    <!-- First-time setup (shown when models are not yet installed) -->
+    <div class="card" id="setupCard" style="display: none;">
+      <h2>🔧 Install Local AI Models</h2>
+      <p class="setup-intro">
+        All 3 models below are required. Download them once — they are stored locally and work fully offline.
+      </p>
+
+      <!-- Qwen classifier row -->
+      <div class="model-install-row" id="installRowQwen">
+        <div class="model-install-info">
+          <strong>Qwen Classifier</strong>
+          <span class="setup-size">~900 MB — validates NER detections, reduces false positives (GPU required)</span>
+        </div>
+        <button class="btn btn-primary btn-sm" id="installQwenBtn">Install</button>
+      </div>
+      <div class="install-progress" id="progressQwen" style="display:none;">
+        <div class="install-progress-label" id="progressQwenLabel">Downloading…</div>
+        <div class="install-progress-bar"><div class="install-progress-fill" id="progressQwenFill"></div></div>
+      </div>
+
+      <!-- English model row -->
+      <div class="model-install-row" id="installRowEnglish">
+        <div class="model-install-info">
+          <strong>Piiranha (Multilingual PII)</strong>
+          <span class="setup-size">317 MB — names, IDs, addresses, phone, email, credit cards &amp; more · 6 languages</span>
+        </div>
+        <button class="btn btn-primary btn-sm" id="installEnglishBtn">Install</button>
+      </div>
+      <div class="install-progress" id="progressEnglish" style="display:none;">
+        <div class="install-progress-label" id="progressEnglishLabel">Downloading…</div>
+        <div class="install-progress-bar"><div class="install-progress-fill" id="progressEnglishFill"></div></div>
+      </div>
+
+      <!-- Chinese model row -->
+      <div class="model-install-row" id="installRowChinese">
+        <div class="model-install-info">
+          <strong>Chinese NER</strong>
+          <span class="setup-size">98 MB — Chinese names, organisations, locations</span>
+        </div>
+        <button class="btn btn-primary btn-sm" id="installChineseBtn">Install</button>
+      </div>
+      <div class="install-progress" id="progressChinese" style="display:none;">
+        <div class="install-progress-label" id="progressChineseLabel">Downloading…</div>
+        <div class="install-progress-bar"><div class="install-progress-fill" id="progressChineseFill"></div></div>
+      </div>
+
+      <!-- Network / proxy settings (collapsed by default) -->
+      <button class="network-settings-toggle" id="networkSettingsToggle" type="button">
+        ⚙ Network settings ▸
+      </button>
+      <div class="network-settings-panel" id="networkSettingsPanel" style="display:none;">
+        <label for="proxyBaseUrl">Mirror / proxy base URL</label>
+        <input type="url" id="proxyBaseUrl"
+               placeholder="https://huggingface.co"
+               autocomplete="off" spellcheck="false">
+        <div class="network-settings-note">
+          If <code>huggingface.co</code> is blocked, enter your organisation's mirror URL
+          (e.g. <code>https://hf-mirror.corp.com</code>). The same file paths will be appended
+          automatically. Leave blank to use HuggingFace directly.<br><br>
+          For a standard HTTP/HTTPS proxy: configure it in
+          <strong>Windows Settings → Network &amp; Internet → Proxy</strong>
+          or <strong>Chrome → Settings → System → Open proxy settings</strong> —
+          Chrome applies it automatically to all downloads.
+        </div>
+      </div>
+
+      <div class="btn-group" style="margin-top:0.75rem;">
+        <button class="btn btn-primary" id="installAllBtn">Install All Models</button>
+      </div>
+      <p class="setup-note">💡 All 3 models must be installed before you can proceed. Models are stored in your browser and work offline after the one-time download.</p>
+    </div>
+
+    <!-- Detected Risk Level -->
+    <div class="card" id="riskCard" style="display:none;">
+      <h2>Detected Risk Level<button class="card-toggle" title="Collapse"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h2>
+      <div class="card-body" id="gradeCard"></div>
+    </div>
+
+    <!-- Results -->
+    <div class="card results" id="resultsCard">
+      <div class="detection-banner" id="detectionBanner" style="display:none;">
+        <div class="detection-banner-title">
+          <span>⚠️</span>
+          <span id="detectionBannerText">0 PII Items Detected</span>
+        </div>
+        <div class="stats-row" id="statsRow">
+          <!-- Stats populated by JS -->
+        </div>
+      </div>
+      <h2 style="padding: 16px 20px 0; margin: 0 -20px;">Detection Results <span style="font-size:0.75rem;font-weight:400;color:#64748b;">(click a type to toggle
+          redaction)</span><button class="card-toggle" title="Collapse"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h2>
+      <div class="card-body">
+      <div id="qwenSection" style="display:none;">
+        <div class="qwen-section-header">
+          <span class="qwen-section-title">🤖 Qwen Review</span>
+          <span id="qwenSectionBadge" class="qwen-section-badge"></span>
+        </div>
+        <div id="qwenReviewInfo" style="font-size:0.82rem; color:#475569; margin-bottom:0.5rem;"></div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.35rem;">
+          <button id="qwenReviewTopBtn" class="btn btn-secondary btn-sm"></button>
+          <button id="qwenReviewAllBtn" class="btn btn-secondary btn-sm" style="display:none;"></button>
+        </div>
+        <div id="qwenReviewProgress" style="display:none; font-size:0.78rem; color:#2563eb; margin-bottom:0.4rem;"></div>
+        <div id="qwenResultsList" class="qwen-results-list"></div>
+      </div>
+      <div class="category-tabs" id="categoryTabs"></div>
+      <div class="summary-grid" id="summary"></div>
+      <div id="redactionCounter" class="redaction-counter"></div>
+      <div class="detection-actions" id="detectionActions">
+        <span class="det-count-label" id="visibleCountLabel"></span>
+        <button id="deselectLowBtn" class="btn btn-secondary btn-sm">Deselect LOW</button>
+        <button id="deselectMediumBtn" class="btn btn-secondary btn-sm">Deselect MEDIUM</button>
+        <button id="selectVisibleBtn" class="btn btn-secondary btn-sm">Select All</button>
+      </div>
+      <div class="detections-scroll">
+        <div id="detectionsList"></div>
+      </div>
+      <div class="btn-group">
+        <button id="downloadMasked" class="btn btn-success">Download Masked</button>
+        <button id="downloadMarkdown" class="btn btn-secondary" style="display:none;">Download Markdown</button>
+        <button id="downloadReport" class="btn btn-primary">Download Report</button>
+      </div>
+      </div><!-- /.card-body -->
+    </div>
+
+    <!-- Processing History -->
+    <div class="card history" id="historyCard">
+      <div class="history-header-row">
+        <h2>Processing History<button class="card-toggle" title="Collapse"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h2>
+        <div class="history-actions">
+          <button id="exportHistory" class="btn btn-secondary btn-sm">📥 Export</button>
+          <button id="clearHistory" class="btn btn-secondary btn-sm">Clear All</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- Stats Cards -->
+        <div class="stats-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon blue">📄</div>
+            <div class="stat-card-info">
+              <h3 id="historyStatFiles">0</h3>
+              <p>Files Processed</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">🛡️</div>
+            <div class="stat-card-info">
+              <h3 id="historyStatPii">0</h3>
+              <p>PII Items Redacted</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon purple">⏱️</div>
+            <div class="stat-card-info">
+              <h3 id="historyStatTime">0s</h3>
+              <p>Avg. Processing Time</p>
+            </div>
+          </div>
+        </div>
+        <div id="historyList" class="history-list">
+          <div class="history-empty">No processing history yet. Upload and process a file to see it here.</div>
+        </div>
+        <!-- Compliance Banner -->
+        <div class="compliance-banner">
+          <span>✓</span>
+          <p><strong>Compliance Ready:</strong> All history entries include SHA-256 hashes (not PII values). Export JSON for audit trails.</p>
+        </div>
+      </div>
+    </div>
+<!-- Local Training -->
+<div class="card" id="correctionsCard" style="display:none;">
+  <div class="corrections-header-row">
+    <h2>Local Training<span id="correctionsBadge" class="corrections-badge"></span><button class="card-toggle" title="Collapse"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h2>
+    <button id="clearCorrections" class="btn btn-secondary btn-sm">Clear All</button>
+  </div>
+  <div id="correctionsList" class="corrections-list card-body">
+    <div class="corrections-empty">No corrections saved yet. Drag detection boundaries to teach the system.</div>
+  </div>
+</div>
+  </div>
+
+  <div class="footer">
+    <p><strong>Local PII Masking</strong> v2.3.5 — 100% Client-side</p>
+    <p>No data leaves your browser • <a href="#" id="privacyPolicyLink">Privacy Policy</a></p>
+  </div>
+  </div><!-- /.main-panel -->
+
+  <div id="panelResizer" title="Drag to resize"></div>
+
+  <!-- Document editor — expands to the right of the main panel -->
+  <div id="editorPanel" class="editor-panel">
+<!-- Placeholder shown before any document is loaded -->
+<div id="editorPlaceholder">
+
+  <div class="ep-demo">
+    <div class="ep-demo-label">What detection looks like</div>
+    <div class="ep-demo-doc">
+      <p>Dear <span class="ep-mark ep-mark-person">Sarah Chen<span class="ep-tag">Person</span></span>,</p>
+      <p>Your application is confirmed. Reach us at <span class="ep-mark ep-mark-email">hr@novacorp.sg<span
+            class="ep-tag">Email</span></span> or <span class="ep-mark ep-mark-phone">+65 9123 4567<span
+            class="ep-tag">Phone</span></span>.</p>
+      <p>NRIC <span class="ep-mark ep-mark-id">S7812345D<span class="ep-tag">NRIC</span></span> verified. Report to
+        <span class="ep-mark ep-mark-address">10 Anson Road, #05-01<span class="ep-tag">Address</span></span> by Monday.
+      </p>
+    </div>
+  </div>
+
+  <div class="ep-features">
+    <div class="ep-feat"><span>🔒</span><span>Zero data transmission</span></div>
+    <div class="ep-feat"><span>🧠</span><span>Regex · NER · LLM</span></div>
+    <div class="ep-feat"><span>✏️</span><span>Drag to adjust spans</span></div>
+    <div class="ep-feat"><span>📄</span><span>TXT · PDF · DOCX</span></div>
+  </div>
+
+  <div class="ep-cta">← Upload a document to begin</div>
+</div>
+
+<div class="editor-toolbar" style="display:none;" id="editorToolbar">
+  <span class="editor-title">Preview</span>
+  <div class="editor-toolbar-right">
+    <button id="maskPreviewToggle" class="btn btn-secondary btn-sm" style="display:none;">
+      Show Masked
+    </button>
+    <span class="editor-legend">
+          <span class="legend-dot legend-green"></span>Mask&nbsp;
+          <span class="legend-dot legend-yellow"></span>Skip
+          </span>
+      </div>
+    </div>
+    <div id="documentEditor" contenteditable="true" spellcheck="false" style="display:none;"></div>
+  </div>
+
+  <!-- Floating toolbar: appears when user selects text in the editor -->
+  <div id="manualAddToolbar">
+    <span style="font-weight:600;color:#475569;">Add as PII:</span>
+    <select id="manualPiiType">
+      <option value="PERSON">Person</option>
+      <option value="EMAIL">Email</option>
+      <option value="PHONE">Phone</option>
+      <option value="ADDRESS">Address</option>
+      <option value="ORGANIZATION">Organization</option>
+      <option value="DATE_OF_BIRTH">Date of Birth</option>
+      <option value="NRIC_SG">NRIC (SG)</option>
+      <option value="PASSPORT">Passport</option>
+      <option value="CREDIT_CARD">Credit Card</option>
+      <option value="CUSTOM">Custom…</option>
+    </select>
+    <input id="manualPiiTypeCustom" type="text" placeholder="Type name">
+    <button id="manualAddBtn" class="btn btn-primary btn-sm">+ Add</button>
+    <button id="manualCancelBtn" style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:2px 5px;font-size:0.9rem;line-height:1;">✕</button>
+  </div>
+
+  <script src="libs/pdfjs/pdf.min.js"></script>
+  <script src="libs/pdflib/pdf-lib.min.js"></script>
+  <script src="libs/pdf-handler.js"></script>
+  <script src="libs/docx/mammoth.browser.min.js"></script>
+  <script src="libs/docx/pizzip.min.js"></script>
+  <script src="libs/docx/docx-handler.js"></script>
+  <script src="libs/asian-id-validators.js"></script>
+  <script src="libs/onnx/ort.min.js"></script>
+  <script src="libs/custom-ner-loader.js"></script>
+  <script src="libs/piiranha-loader.js"></script>
+  <script src="libs/qwen-classifier.js"></script>
+  <script src="libs/chance.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

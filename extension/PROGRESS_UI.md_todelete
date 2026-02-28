@@ -1,0 +1,405 @@
+# Progress UI for Sliding Window Processing
+
+## Overview
+
+When processing large documents (>512 tokens) with the sliding window approach, the UI now shows real-time progress updates to keep users informed.
+
+---
+
+## What Users See
+
+### Small Documents (≤512 tokens)
+
+**Progress Message:**
+```
+Processing document...
+```
+
+**Duration:** <1 second
+
+---
+
+### Large Documents (>512 tokens)
+
+#### Phase 1: Initial Message
+```
+Processing large document: 7 chunks (2871 tokens)
+```
+
+#### Phase 2: Chunk Processing (with percentage)
+```
+Processing chunk 1/7 (14%)...
+Processing chunk 2/7 (29%)...
+Processing chunk 3/7 (43%)...
+Processing chunk 4/7 (57%)...
+Processing chunk 5/7 (71%)...
+Processing chunk 6/7 (86%)...
+Processing chunk 7/7 (100%)...
+```
+
+#### Phase 3: Merging Results
+```
+Merging results (found 167 entities)...
+```
+
+#### Phase 4: Completion
+```
+Completed: 142 unique entities detected
+```
+
+---
+
+## Example Timeline
+
+### For 2,871-token Document (7 chunks):
+
+| Time | Progress Message | Console Log |
+|------|------------------|-------------|
+| 0.0s | Processing large document: 7 chunks (2871 tokens) | [CustomNER] Using sliding window approach |
+| 0.5s | Processing chunk 1/7 (14%)... | [CustomNER] Processing chunk 1/7... |
+| 1.0s | Processing chunk 2/7 (29%)... | [CustomNER] Processing chunk 2/7... |
+| 1.5s | Processing chunk 3/7 (43%)... | [CustomNER] Processing chunk 3/7... |
+| 2.0s | Processing chunk 4/7 (57%)... | [CustomNER] Processing chunk 4/7... |
+| 2.5s | Processing chunk 5/7 (71%)... | [CustomNER] Processing chunk 5/7... |
+| 3.0s | Processing chunk 6/7 (86%)... | [CustomNER] Processing chunk 6/7... |
+| 3.5s | Processing chunk 7/7 (100%)... | [CustomNER] Processing chunk 7/7... |
+| 3.7s | Merging results (found 45 entities)... | [CustomNER] All chunks processed |
+| 3.8s | Completed: 42 unique entities detected | [CustomNER] After deduplication: 42 |
+| 4.0s | ✅ Detection complete | Detected 135 PII item(s) |
+
+---
+
+### For 22,553-token Document (57 chunks):
+
+| Time | Progress Message | Chunks Processed |
+|------|------------------|------------------|
+| 0s | Processing large document: 57 chunks (22553 tokens) | 0 |
+| 5s | Processing chunk 10/57 (18%)... | 10 |
+| 10s | Processing chunk 20/57 (35%)... | 20 |
+| 15s | Processing chunk 30/57 (53%)... | 30 |
+| 20s | Processing chunk 40/57 (70%)... | 40 |
+| 25s | Processing chunk 50/57 (88%)... | 50 |
+| 28s | Processing chunk 57/57 (100%)... | 57 |
+| 29s | Merging results (found 167 entities)... | Complete |
+| 30s | Completed: 142 unique entities detected | Complete |
+
+---
+
+## UI Implementation
+
+### Progress Indicator Location
+
+The progress message appears in the existing **progress bar** element:
+
+```html
+<div id="progress" style="display: none;">
+  <div class="spinner"></div>
+  <div id="progressText">Processing...</div>
+</div>
+```
+
+### CSS Styling
+
+The progress bar already has styling:
+- Blue spinner animation
+- Bold text for the message
+- Centered alignment
+- Visible during processing, hidden when complete
+
+---
+
+## Code Flow
+
+### 1. User Uploads File
+
+```javascript
+// popup.js - detectPII()
+showProgress(true, 'Detecting PII...');
+```
+
+### 2. NER Detection Starts
+
+```javascript
+// popup.js - detectWithNER()
+const results = await window.nerPipeline.predict(text, (message) => {
+  showProgress(true, message);
+});
+```
+
+### 3. Custom NER Loader Updates Progress
+
+```javascript
+// custom-ner-loader.js - predictWithSlidingWindow()
+if (progressCallback) {
+  progressCallback(`Processing chunk ${i + 1}/${chunks.length} (${percentage}%)...`);
+}
+```
+
+### 4. UI Updates in Real-Time
+
+```javascript
+// popup.js - showProgress()
+document.getElementById('progressText').textContent = message;
+```
+
+### 5. Detection Completes
+
+```javascript
+// popup.js - detectPII()
+showProgress(false);
+showStatus(`Detected ${detections.length} PII item(s)`, 'success');
+```
+
+---
+
+## Benefits
+
+### User Experience
+
+✅ **Transparency**: Users see exactly what's happening
+✅ **Confidence**: Progress bar shows the process isn't stuck
+✅ **Expectations**: Percentage helps estimate time remaining
+✅ **Feedback**: Real-time updates every chunk (every ~0.5s)
+
+### Developer Experience
+
+✅ **Simple API**: Just pass a callback function
+✅ **No breaking changes**: progressCallback is optional
+✅ **Backward compatible**: Works with old code (no callback)
+✅ **Flexible**: Can update any UI element via callback
+
+---
+
+## Comparison: Before vs After
+
+### Before (No Progress UI)
+
+```
+User uploads file
+  ↓
+"Detecting PII..." (appears)
+  ↓
+[30 seconds of silence]
+  ↓
+"Detected 142 PII item(s)" (appears)
+```
+
+**User thinks:** "Is it frozen? Should I wait? Is it working?"
+
+---
+
+### After (With Progress UI)
+
+```
+User uploads file
+  ↓
+"Processing large document: 57 chunks (22553 tokens)"
+  ↓
+"Processing chunk 1/57 (2%)..."
+"Processing chunk 2/57 (4%)..."
+"Processing chunk 3/57 (5%)..."
+...
+"Processing chunk 57/57 (100%)..."
+  ↓
+"Merging results (found 167 entities)..."
+  ↓
+"Completed: 142 unique entities detected"
+  ↓
+"Detected 142 PII item(s)"
+```
+
+**User sees:** Clear progress, knows it's working, can estimate time remaining
+
+---
+
+## Edge Cases
+
+### Case 1: Very Fast Processing
+
+If chunks process very quickly (<100ms each), updates might flash by:
+
+**Solution:** Progress bar is designed for this - it's okay if updates are fast
+
+---
+
+### Case 2: Network/CPU Slowdown
+
+If processing slows down, progress updates show this:
+
+```
+Processing chunk 20/57 (35%)...  [2 seconds]
+Processing chunk 21/57 (37%)...  [5 seconds - slow!]
+```
+
+**User benefit:** Knows the system is still working, just slower
+
+---
+
+### Case 3: Single Chunk Documents
+
+For documents ≤512 tokens:
+
+```
+Processing document...  [<1 second]
+Detected X PII item(s)
+```
+
+**User benefit:** Simple, fast, no chunking info needed
+
+---
+
+## Future Enhancements
+
+### 1. Progress Bar (Visual)
+
+Add a visual progress bar:
+
+```html
+<div class="progress-bar">
+  <div class="progress-fill" style="width: 35%"></div>
+</div>
+<div>Processing chunk 20/57 (35%)...</div>
+```
+
+### 2. Time Remaining Estimate
+
+Calculate estimated time remaining:
+
+```
+Processing chunk 20/57 (35%)...
+Estimated time remaining: 18 seconds
+```
+
+### 3. Cancel Button
+
+Allow users to cancel long-running operations:
+
+```html
+<button id="cancelProcessing">Cancel</button>
+```
+
+```javascript
+if (userCancelled) {
+  throw new Error('Processing cancelled by user');
+}
+```
+
+### 4. Detailed Stats
+
+Show more information:
+
+```
+Processing chunk 20/57 (35%)
+Found 45 entities so far
+Speed: 2.5 chunks/second
+```
+
+---
+
+## Testing
+
+### Test Case 1: Small Document
+
+**File:** test-name-detection.txt (~500 tokens)
+
+**Expected:**
+```
+Processing document...
+[<1 second later]
+Detected 8 PII item(s)
+```
+
+---
+
+### Test Case 2: Medium Document
+
+**File:** test-asian-ids.txt (~1,200 tokens, 3 chunks)
+
+**Expected:**
+```
+Processing large document: 3 chunks (1200 tokens)
+Processing chunk 1/3 (33%)...
+Processing chunk 2/3 (67%)...
+Processing chunk 3/3 (100%)...
+Merging results (found 35 entities)...
+Completed: 32 unique entities detected
+Detected 32 PII item(s)
+```
+
+**Duration:** ~2 seconds
+
+---
+
+### Test Case 3: Large Document
+
+**File:** test-addresses.txt (~2,871 tokens, 7 chunks)
+
+**Expected:**
+```
+Processing large document: 7 chunks (2871 tokens)
+Processing chunk 1/7 (14%)...
+Processing chunk 2/7 (29%)...
+Processing chunk 3/7 (43%)...
+Processing chunk 4/7 (57%)...
+Processing chunk 5/7 (71%)...
+Processing chunk 6/7 (86%)...
+Processing chunk 7/7 (100%)...
+Merging results (found 45 entities)...
+Completed: 42 unique entities detected
+Detected 42 PII item(s)
+```
+
+**Duration:** ~4 seconds
+
+---
+
+### Test Case 4: Very Large Document
+
+**File:** Large combined test (~22,553 tokens, 57 chunks)
+
+**Expected:**
+```
+Processing large document: 57 chunks (22553 tokens)
+Processing chunk 1/57 (2%)...
+Processing chunk 2/57 (4%)...
+...
+[Progress updates every 0.5 seconds]
+...
+Processing chunk 57/57 (100%)...
+Merging results (found 167 entities)...
+Completed: 142 unique entities detected
+Detected 142 PII item(s)
+```
+
+**Duration:** ~28-30 seconds
+
+---
+
+## Summary
+
+✅ **Implementation complete**
+- Progress callback added to `predict()` method
+- UI updates every chunk with percentage
+- Merging step shows entity count
+- Completion message shows final count
+
+✅ **User-friendly**
+- Clear messages about what's happening
+- Real-time progress updates
+- Percentage shows how far along
+- No silent waiting periods
+
+✅ **Backward compatible**
+- progressCallback is optional
+- Existing code works unchanged
+- New code can leverage progress updates
+
+✅ **Ready to test**
+- Reload extension
+- Upload any large file
+- Watch progress updates in UI
+
+---
+
+**Last updated:** February 2026
+**Status:** ✅ Complete and ready for testing

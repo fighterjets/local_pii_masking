@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=440, initial-scale=1.0">
+  <title>Small Promo Tile - 440x280</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 440px;
+      height: 280px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .tile {
+      width: 440px;
+      height: 280px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      padding: 20px 24px;
+      color: white;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .header p {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    .content {
+      flex: 1;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: #334155;
+    }
+    .feature .icon {
+      width: 20px;
+      height: 20px;
+      background: #dcfce7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #166534;
+    }
+    .badge {
+      align-self: center;
+      background: #dbeafe;
+      color: #1d4ed8;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="tile">
+    <div class="header">
+      <h1>🔒 Local PII Masking</h1>
+      <p>Enterprise PII Detection & Redaction</p>
+    </div>
+    <div class="content">
+      <div class="features">
+        <div class="feature">
+          <div class="icon">✓</div>
+          <span>100% Client-side — Zero cloud</span>
+        </div>
+        <div class="feature">
+          <div class="icon">✓</div>
+          <span>PDF, DOCX, TXT support</span>
+        </div>
+        <div class="feature">
+          <div class="icon">✓</div>
+          <span>English & Chinese AI models</span>
+        </div>
+      </div>
+      <div class="badge">🔐 Privacy First</div>
+    </div>
+  </div>
+</body>
+</html>

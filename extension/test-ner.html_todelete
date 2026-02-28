@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NER Detection Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { color: #1e40af; }
+    h2 { color: #059669; margin-top: 30px; }
+    pre {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    .error { color: #dc2626; }
+    .success { color: #059669; }
+    .info { color: #2563eb; }
+    #status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .entity {
+      display: inline-block;
+      margin: 5px;
+      padding: 5px 10px;
+      border-radius: 3px;
+      background: #dbeafe;
+      border: 1px solid #3b82f6;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 NER Detection Unit Test</h1>
+
+  <div id="status">Loading...</div>
+
+  <button id="runTestBtn" style="padding: 10px 20px; font-size: 16px; margin: 10px 0;">
+    🚀 Run NER Test
+  </button>
+
+  <h2>📄 Test Text</h2>
+  <pre id="testText"></pre>
+
+  <h2>🔍 Detection Results</h2>
+  <div id="results"></div>
+
+  <h2>📊 Raw Logits (first token)</h2>
+  <pre id="logitsDebug"></pre>
+
+  <!-- Load test script (external file to comply with CSP) -->
+  <script src="test-ner.js"></script>
+</body>
+</html>

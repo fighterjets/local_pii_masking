@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;
+                 style-src 'self' 'unsafe-inline';
+                 connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co;
+                 img-src 'self' data:;
+                 font-src 'self';
+                 object-src 'none';
+                 base-uri 'self';">
+  <title>Local PII Masking - Standalone</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .subtitle {
+      color: var(--text-light);
+      font-size: 1.1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+
+    .upload-zone {
+      border: 3px dashed var(--border);
+      border-radius: 8px;
+      padding: 3rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(37, 99, 235, 0.05);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--text-light);
+      color: white;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .progress {
+      margin: 1rem 0;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.3s;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status {
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      display: none;
+    }
+
+    .status.info {
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .status.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .detections {
+      display: none;
+    }
+
+    .detection-item {
+      padding: 1rem;
+      border-left: 4px solid var(--primary);
+      background: rgba(37, 99, 235, 0.05);
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .summary-card {
+      padding: 1.5rem;
+      background: var(--bg);
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .summary-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .config-option {
+      margin: 0.5rem 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    .security-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: var(--success);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin: 0.5rem 0.25rem;
+    }
+
+    .model-loading {
+      margin-top: 1rem;
+      padding: 1.5rem;
+      background: var(--surface);
+      border-radius: 6px;
+      border: 2px solid var(--primary);
+      display: none;
+    }
+
+    .model-loading.active {
+      display: block;
+    }
+
+    .loading-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .loading-title {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .progress-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    .progress-indicator {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--success));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-indicator.indeterminate {
+      width: 30%;
+      animation: progress-indeterminate 1.5s ease-in-out infinite;
+    }
+
+    @keyframes progress-indeterminate {
+      0% { transform: translateX(-100%); }
+      50% { transform: translateX(350%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .stage-item {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem;
+      margin: 0.25rem 0;
+      font-size: 0.9rem;
+    }
+
+    .stage-item.active {
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .stage-item.complete {
+      color: var(--success);
+    }
+
+    .stage-item.error {
+      color: var(--danger);
+    }
+
+    .stage-icon {
+      margin-right: 0.5rem;
+      width: 20px;
+    }
+
+    .spinner {
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Local PII Masking</h1>
+      <p class="subtitle">Enterprise-Grade PII Detection - 100% Client-Side</p>
+      <div>
+        <span class="security-badge">No Server Required</span>
+        <span class="security-badge">100% Browser-Based</span>
+        <span class="security-badge">Zero Data Transmission</span>
+      </div>
+    </header>
+
+    <main>
+      <!-- Note -->
+      <div class="card" style="background: #fef3c7; border-left: 4px solid #f59e0b;">
+        <strong>📝 Standalone Version</strong>
+        <p style="margin-top: 0.5rem; color: #92400e;">
+          This is a standalone HTML file that runs entirely in your browser. Just open it and start using!
+          <br><strong>Note:</strong> Text-only detection (TXT files). PDF/DOCX parsing requires a web server.
+        </p>
+      </div>
+
+      <!-- Configuration -->
+      <div class="card">
+        <h2>Configuration</h2>
+        <div class="config-option">
+          <label for="maskingStrategy">Masking Strategy:</label>
+          <select id="maskingStrategy">
+            <option value="REDACTION">Redaction ([REDACTED])</option>
+            <option value="TOKENIZATION">Tokenization ([NAME_1])</option>
+            <option value="PARTIAL">Partial Masking (j***@***.com)</option>
+          </select>
+        </div>
+        <div class="config-option">
+          <button id="preloadBtn" class="btn btn-secondary">Preload ML Model (Optional)</button>
+
+          <div id="modelLoading" class="model-loading">
+            <div class="loading-header">
+              <span class="loading-title">Loading ML Model...</span>
+              <span id="loadingTime">0s</span>
+            </div>
+            <div class="progress-track">
+              <div id="progressIndicator" class="progress-indicator indeterminate"></div>
+            </div>
+            <div id="stage-init" class="stage-item">
+              <span class="stage-icon">○</span>
+              <span>Initializing Transformers.js</span>
+            </div>
+            <div id="stage-download" class="stage-item">
+              <span class="stage-icon">○</span>
+              <span>Downloading model (~50MB)</span>
+            </div>
+            <div id="stage-ready" class="stage-item">
+              <span class="stage-icon">○</span>
+              <span>Model ready</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload -->
+      <div class="card">
+        <h2>Upload Document</h2>
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon">📄</div>
+          <p>Click to select a text file</p>
+          <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0.5rem;">
+            Supported: TXT files only in standalone mode
+          </p>
+        </div>
+        <input type="file" id="fileInput" accept=".txt,text/plain">
+
+        <div class="progress" id="progress">
+          <p id="progressText">Processing...</p>
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div id="statusMessage" class="status"></div>
+      </div>
+
+      <!-- Results -->
+      <div class="card detections" id="resultsCard">
+        <h2>Detection Results</h2>
+        <div class="summary-grid" id="summary"></div>
+        <h3 style="margin-top: 2rem;">Detected PII</h3>
+        <div id="detectionsList"></div>
+        <div class="btn-group">
+          <button id="downloadMasked" class="btn btn-success">Download Masked Document</button>
+          <button id="downloadReport" class="btn btn-primary">Download Report (JSON)</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Configuration
+    const CONFIG = {
+      detection: {
+        singaporePatterns: {
+          nric: { pattern: /[STFGM]\d{7}[A-Z]/g, type: 'NRIC' },
+          phone: { pattern: /(?:\+65)?[689]\d{7}/g, type: 'PHONE_SG' }
+        },
+        universalPatterns: {
+          email: { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, type: 'EMAIL' }
+        }
+      }
+    };
+
+    // State
+    let detections = [];
+    let maskedText = '';
+    let originalText = '';
+
+    // SHA-256 hash
+    async function hashContent(content) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(content);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Detect PII using regex
+    async function detectPII(text) {
+      const results = [];
+      const allPatterns = {
+        ...CONFIG.detection.singaporePatterns,
+        ...CONFIG.detection.universalPatterns
+      };
+
+      for (const [id, pattern] of Object.entries(allPatterns)) {
+        const regex = new RegExp(pattern.pattern.source, pattern.pattern.flags);
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          results.push({
+            type: pattern.type,
+            value: match[0],
+            start: match.index,
+            end: match.index + match[0].length,
+            confidence: 1.0,
+            method: 'regex',
+            hash: await hashContent(match[0])
+          });
+        }
+      }
+
+      return results.sort((a, b) => a.start - b.start);
+    }
+
+    // Mask PII
+    function maskPII(text, detections, strategy) {
+      let masked = text;
+      let offset = 0;
+
+      for (const detection of detections) {
+        const start = detection.start + offset;
+        const end = detection.end + offset;
+        const original = masked.substring(start, end);
+
+        let replacement;
+        if (strategy === 'REDACTION') {
+          replacement = `[REDACTED_${detection.type}]`;
+        } else if (strategy === 'TOKENIZATION') {
+          const index = detections.indexOf(detection);
+          replacement = `[${detection.type}_${index}]`;
+        } else if (strategy === 'PARTIAL') {
+          if (detection.type === 'EMAIL') {
+            const parts = original.split('@');
+            replacement = `${parts[0][0]}***@***${parts[1].slice(-5)}`;
+          } else {
+            replacement = `${original[0]}${'*'.repeat(Math.max(0, original.length - 2))}${original.slice(-1)}`;
+          }
+        }
+
+        masked = masked.substring(0, start) + replacement + masked.substring(end);
+        offset += replacement.length - original.length;
+      }
+
+      return masked;
+    }
+
+    // UI Functions
+    function showStatus(message, type) {
+      const status = document.getElementById('statusMessage');
+      status.textContent = message;
+      status.className = `status ${type}`;
+      status.style.display = 'block';
+    }
+
+    function showProgress(show) {
+      document.getElementById('progress').style.display = show ? 'block' : 'none';
+    }
+
+    function displayResults(detections, report) {
+      if (detections.length === 0) {
+        showStatus('No PII detected in this document!', 'success');
+        return;
+      }
+
+      showStatus(`Detected ${detections.length} PII item(s)`, 'success');
+      document.getElementById('resultsCard').style.display = 'block';
+
+      // Summary
+      const summary = {};
+      detections.forEach(d => {
+        summary[d.type] = (summary[d.type] || 0) + 1;
+      });
+
+      const summaryDiv = document.getElementById('summary');
+      summaryDiv.innerHTML = '';
+      Object.entries(summary).forEach(([type, count]) => {
+        summaryDiv.innerHTML += `
+          <div class="summary-card">
+            <div class="summary-value">${count}</div>
+            <div style="color: var(--text-light); font-size: 0.9rem;">${type}</div>
+          </div>
+        `;
+      });
+
+      // Detections list
+      const listDiv = document.getElementById('detectionsList');
+      listDiv.innerHTML = '';
+      detections.forEach((d, i) => {
+        listDiv.innerHTML += `
+          <div class="detection-item">
+            <div style="font-weight: 600; color: var(--primary);">#${i+1}: ${d.type}</div>
+            <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">
+              Position: ${d.start}-${d.end} | Method: ${d.method} | Confidence: 100%
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // File handling
+    document.getElementById('uploadZone').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      if (!e.target.files[0]) return;
+
+      const file = e.target.files[0];
+      showProgress(true);
+      showStatus('Reading file...', 'info');
+
+      try {
+        originalText = await file.text();
+        showStatus('Detecting PII...', 'info');
+
+        detections = await detectPII(originalText);
+
+        const strategy = document.getElementById('maskingStrategy').value;
+        maskedText = maskPII(originalText, detections, strategy);
+
+        showProgress(false);
+        displayResults(detections);
+
+      } catch (error) {
+        showProgress(false);
+        showStatus(`Error: ${error.message}`, 'error');
+      }
+    });
+
+    // Download masked document
+    document.getElementById('downloadMasked').addEventListener('click', () => {
+      const blob = new Blob([maskedText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'masked-document.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Download report
+    document.getElementById('downloadReport').addEventListener('click', () => {
+      const report = {
+        timestamp: new Date().toISOString(),
+        totalDetections: detections.length,
+        detections: detections.map(d => ({
+          type: d.type,
+          position: { start: d.start, end: d.end },
+          hash: d.hash,
+          confidence: d.confidence
+        }))
+      };
+
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pii-report.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Model preload (optional - for future NER)
+    document.getElementById('preloadBtn').addEventListener('click', () => {
+      showStatus('ML model loading not implemented in standalone mode. Use server version for full features.', 'info');
+    });
+  </script>
+</body>
+</html>

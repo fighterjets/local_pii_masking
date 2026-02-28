@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;
+                 style-src 'self' 'unsafe-inline';
+                 connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co;
+                 img-src 'self' data:;
+                 font-src 'self';
+                 object-src 'none';
+                 base-uri 'self';">
+  <title>Local PII Masking - Enterprise PII Detection</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .subtitle {
+      color: var(--text-light);
+      font-size: 1.1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+
+    .upload-zone {
+      border: 3px dashed var(--border);
+      border-radius: 8px;
+      padding: 3rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(37, 99, 235, 0.05);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--text-light);
+      color: white;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .progress {
+      margin: 1rem 0;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.3s;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status {
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      display: none;
+    }
+
+    .status.info {
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .status.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .detections {
+      display: none;
+    }
+
+    .detection-item {
+      padding: 1rem;
+      border-left: 4px solid var(--primary);
+      background: rgba(37, 99, 235, 0.05);
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+    }
+
+    .detection-type {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .detection-meta {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      margin-top: 0.25rem;
+    }
+
+    .confidence {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .confidence.high {
+      background: var(--danger);
+      color: white;
+    }
+
+    .confidence.medium {
+      background: var(--warning);
+      color: white;
+    }
+
+    .confidence.low {
+      background: var(--text-light);
+      color: white;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .summary-card {
+      padding: 1.5rem;
+      background: var(--bg);
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .summary-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .summary-label {
+      color: var(--text-light);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+
+    .config-section {
+      margin-top: 1rem;
+    }
+
+    .config-option {
+      margin: 0.5rem 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-light);
+      font-size: 0.9rem;
+    }
+
+    .security-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: var(--success);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin: 0.5rem 0.25rem;
+    }
+
+    .preload-info {
+      padding: 1rem;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--warning);
+      border-radius: 6px;
+      margin-top: 1rem;
+    }
+
+    .model-loading {
+      margin-top: 1rem;
+      padding: 1.5rem;
+      background: var(--surface);
+      border-radius: 6px;
+      border: 2px solid var(--primary);
+      display: none;
+    }
+
+    .model-loading.active {
+      display: block;
+    }
+
+    .loading-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .loading-title {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .loading-time {
+      color: var(--text-light);
+      font-size: 0.9rem;
+    }
+
+    .progress-container {
+      margin: 1rem 0;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--text-light);
+    }
+
+    .progress-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-indicator {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--success));
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 4px;
+    }
+
+    .progress-indicator.indeterminate {
+      width: 30%;
+      animation: progress-indeterminate 1.5s ease-in-out infinite;
+    }
+
+    @keyframes progress-indeterminate {
+      0% { transform: translateX(-100%); }
+      50% { transform: translateX(350%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .loading-stages {
+      margin-top: 1rem;
+    }
+
+    .stage-item {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem;
+      margin: 0.25rem 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .stage-item.pending {
+      color: var(--text-light);
+    }
+
+    .stage-item.active {
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .stage-item.complete {
+      color: var(--success);
+    }
+
+    .stage-item.error {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .stage-icon {
+      margin-right: 0.5rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    .spinner {
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Local PII Masking</h1>
+      <p class="subtitle">Enterprise-Grade PII Detection - 100% Client-Side</p>
+      <div>
+        <span class="security-badge">Zero Server Communication</span>
+        <span class="security-badge">GDPR Compliant</span>
+        <span class="security-badge">Enterprise Security</span>
+      </div>
+    </header>
+
+    <main>
+      <!-- Configuration Card -->
+      <div class="card">
+        <h2>Configuration</h2>
+        <div class="config-section">
+          <div class="config-option">
+            <label for="maskingStrategy">Masking Strategy:</label>
+            <select id="maskingStrategy">
+              <option value="REDACTION">Redaction ([REDACTED])</option>
+              <option value="TOKENIZATION">Tokenization ([NAME_1])</option>
+              <option value="HASH">Hash (SHA-256)</option>
+              <option value="PARTIAL">Partial Masking (j***@***.com)</option>
+            </select>
+          </div>
+          <div class="config-option">
+            <button id="preloadBtn" class="btn btn-secondary">Preload ML Model</button>
+            <div id="preloadStatus" class="preload-info" style="display: none;">
+              Model preloading improves first-detection speed but takes ~30 seconds.
+            </div>
+
+            <!-- Model Loading Progress -->
+            <div id="modelLoading" class="model-loading">
+              <div class="loading-header">
+                <span class="loading-title">Loading ML Model...</span>
+                <span class="loading-time" id="loadingTime">0s</span>
+              </div>
+
+              <div class="progress-container">
+                <div class="progress-label">
+                  <span id="progressText">Initializing...</span>
+                  <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-track">
+                  <div id="progressIndicator" class="progress-indicator indeterminate"></div>
+                </div>
+              </div>
+
+              <div class="loading-stages">
+                <div class="stage-item pending" id="stage-init">
+                  <span class="stage-icon">○</span>
+                  <span>Initializing Transformers.js</span>
+                </div>
+                <div class="stage-item pending" id="stage-download">
+                  <span class="stage-icon">○</span>
+                  <span>Downloading model (~50MB)</span>
+                </div>
+                <div class="stage-item pending" id="stage-load">
+                  <span class="stage-icon">○</span>
+                  <span>Loading into WebAssembly</span>
+                </div>
+                <div class="stage-item pending" id="stage-ready">
+                  <span class="stage-icon">○</span>
+                  <span>Model ready for inference</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Card -->
+      <div class="card">
+        <h2>Upload Document</h2>
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon">📄</div>
+          <p>Drag & drop your document here or click to browse</p>
+          <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0.5rem;">
+            Supported: PDF, DOCX, TXT (Max 50MB)
+          </p>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain">
+
+        <div class="progress" id="progress">
+          <p id="progressText">Processing...</p>
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div id="statusMessage" class="status"></div>
+      </div>
+
+      <!-- Results Card -->
+      <div class="card detections" id="resultsCard">
+        <h2>Detection Results</h2>
+
+        <div class="summary-grid" id="summary"></div>
+
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Detected PII</h3>
+        <div id="detectionsList"></div>
+
+        <div class="btn-group">
+          <button id="downloadMasked" class="btn btn-success">Download Masked Document</button>
+          <button id="downloadReportJson" class="btn btn-primary">Download Report (JSON)</button>
+          <button id="downloadReportMd" class="btn btn-primary">Download Report (Markdown)</button>
+          <button id="downloadLogs" class="btn btn-secondary">Download Audit Logs</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>Local PII Masking - Enterprise PII Detection | No data leaves your device</p>
+      <p style="margin-top: 0.5rem;">Built with PDF.js, mammoth.js, and Transformers.js</p>
+    </footer>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

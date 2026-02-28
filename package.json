@@ -1,0 +1,98 @@
+{
+  "name": "local-pii-masking",
+  "version": "2.3.5",
+  "description": "Enterprise-grade client-side PII detection and masking solution",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "start:node": "npx http-server -p 8000 -c-1",
+    "test": "python3 -m http.server 8000 & sleep 2 && echo 'Open http://localhost:8000/test/test-runner.html in browser'",
+    "test:watch": "python3 -m http.server 8000",
+    "lint": "eslint *.js core/*.js parsers/*.js utils/*.js"
+  },
+  "keywords": [
+    "pii",
+    "privacy",
+    "gdpr",
+    "pdpa",
+    "redaction",
+    "anonymization",
+    "nlp",
+    "ner",
+    "pii-masking",
+    "enterprise",
+    "security",
+    "client-side"
+  ],
+  "author": "Your Organization",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/local-pii-masking"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "eslint": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browserslist": [
+    "Chrome >= 87",
+    "Firefox >= 78",
+    "Safari >= 14",
+    "Edge >= 87"
+  ],
+  "externalDependencies": {
+    "pdfjs-dist": {
+      "version": "4.0.379",
+      "cdn": "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs",
+      "license": "Apache-2.0",
+      "vendor": "Mozilla"
+    },
+    "mammoth": {
+      "version": "1.6.0",
+      "cdn": "https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js",
+      "license": "BSD-2-Clause",
+      "vendor": "Michael Williamson"
+    },
+    "@xenova/transformers": {
+      "version": "2.17.2",
+      "cdn": "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js",
+      "license": "Apache-2.0",
+      "vendor": "Hugging Face"
+    }
+  },
+  "features": {
+    "documentParsing": ["PDF", "DOCX", "TXT"],
+    "detectionMethods": ["Regex", "NER (ML)"],
+    "maskingStrategies": ["Redaction", "Tokenization", "Hash", "Partial"],
+    "piiTypes": {
+      "singapore": ["NRIC/FIN", "Phone", "Postal Code"],
+      "universal": ["Email", "Person Names", "Organizations", "Locations", "Credit Cards"]
+    },
+    "security": [
+      "Zero server communication",
+      "Client-side processing",
+      "Magic byte validation",
+      "SHA-256 hashing",
+      "CSP enforcement",
+      "Rate limiting",
+      "Comprehensive audit logging"
+    ],
+    "compliance": ["GDPR", "PDPA"]
+  },
+  "systemRequirements": {
+    "browser": {
+      "webAssembly": true,
+      "cryptoAPI": true,
+      "es6Modules": true,
+      "fileReaderAPI": true
+    },
+    "network": {
+      "cdnAccess": "Required for initial load (can be self-hosted)",
+      "https": "Required for production"
+    }
+  }
+}

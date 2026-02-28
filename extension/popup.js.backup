@@ -1,0 +1,1340 @@
+/**
+ * Local PII Masking v2.3.5 - Browser Extension
+ * PII Detection and Masking - 100% Client-Side
+ */
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const CONFIG = {
+  detection: {
+    thresholds: {
+      regex: 1.0,
+      ner: 0.85
+    },
+    methods: {
+      regex: true,
+      ner: false // Disabled by default, enable with preload button
+    },
+    asianIDPatterns: {
+      // Singapore
+      singaporeNRIC: {
+        pattern: /\b[STFGM]\d{7}[A-Z]\b/g,
+        type: 'NRIC_SG',
+        description: 'Singapore NRIC/FIN',
+        validator: 'validateNRIC'
+      },
+      singaporePassport: {
+        pattern: /\b[KEG]\d{7}[A-Z]\b/g,
+        type: 'PASSPORT_SG',
+        description: 'Singapore Passport'
+      },
+      singaporePhone: {
+        pattern: /(?:\+65\s?)?[689]\d{7}\b/g,
+        type: 'PHONE_SG',
+        description: 'Singapore phone number'
+      },
+      singaporePostalCode: {
+        pattern: /\b\d{6}\b/g,
+        type: 'POSTAL_CODE_SG',
+        description: 'Singapore postal code'
+      },
+      singaporeAddress: {
+        pattern: /(?:Blk|Block|Blk\.|BLK)\s*\d+[A-Z]?\s+[A-Za-z\s]+(?:Road|Rd|Street|St|Avenue|Ave|Drive|Dr|Lane|Ln|Close|Crescent|Cres|Boulevard|Blvd|Highway|Hwy)\s*(?:#\d{2}-\d{2,4})?\s*(?:Singapore\s+\d{6})?/gi,
+        type: 'ADDRESS_SG',
+        description: 'Singapore address'
+      },
+      singaporeAddressUnit: {
+        pattern: /(?:#|Unit|Apt|Apartment)\s*\d{2}-\d{2,4}/gi,
+        type: 'ADDRESS_SG',
+        description: 'Singapore unit number'
+      },
+      singaporeUEN: {
+        pattern: /\b(?:[0-9]{8}[A-Z]|[0-9]{9}[A-Z]|[TS][0-9]{2}[A-Z]{2}[0-9]{4}[A-Z])\b/g,
+        type: 'UEN_SG',
+        description: 'Singapore UEN (Unique Entity Number)'
+      },
+
+      // China
+      chinaID: {
+        pattern: /\b\d{17}[\dXx]\b/g,
+        type: 'NATIONAL_ID_CN',
+        description: 'China National ID (居民身份证)',
+        validator: 'validateChinaID'
+      },
+      chinaPassport: {
+        pattern: /\b[EGD]\d{8}\b/g,
+        type: 'PASSPORT_CN',
+        description: 'China Passport'
+      },
+      chinaAddressEnglish: {
+        pattern: /(?:Room|Rm|Suite|Unit|Floor|Flr|F|Building|Bldg|Block|Tower)\s*[\dA-Z]+[,\s]+(?:No\.\s*)?\d+\s+[A-Za-z\s]+(?:Road|Rd|Street|St|Avenue|Ave|Boulevard|Blvd|Lane|Ln)[,\s]+(?:[A-Za-z\s]+District|[A-Za-z\s]+Area)[,\s]+(?:Shanghai|Beijing|Guangzhou|Shenzhen|Chengdu|Hangzhou|Nanjing|Suzhou|Wuhan|Xi'an|Chongqing|Tianjin)/gi,
+        type: 'ADDRESS_CN',
+        description: 'China address (English format)'
+      },
+      chinaAddressSimple: {
+        pattern: /(?:No\.\s*)?\d+\s+[A-Za-z\s]+(?:Road|Rd|Street|St|Avenue|Ave)[,\s]+(?:Shanghai|Beijing|Guangzhou|Shenzhen|Chengdu|Hangzhou|Nanjing)/gi,
+        type: 'ADDRESS_CN',
+        description: 'China street address'
+      },
+      chinaUSCC: {
+        pattern: /\b[0-9A-HJ-NP-RTUW-Y]{18}\b/g,
+        type: 'USCC_CN',
+        description: 'China Unified Social Credit Code (统一社会信用代码)'
+      },
+
+      // Hong Kong
+      hongKongID: {
+        pattern: /\b[A-Z]{1,2}\d{6}[(\s]?\d[)A]?\b/gi,
+        type: 'HKID',
+        description: 'Hong Kong ID Card',
+        validator: 'validateHKID'
+      },
+      hongKongPassport: {
+        pattern: /\b[KH]\d{7,8}\b/g,
+        type: 'PASSPORT_HK',
+        description: 'Hong Kong Passport'
+      },
+      hongKongAddress: {
+        pattern: /(?:Flat|Ft|Unit|Rm|Room)\s*[\dA-Z]+[,\s]+(?:\d{1,3}\/F|Floor\s+\d+)[,\s]+[A-Za-z\s&']+(?:Building|Bldg|Plaza|Centre|Center|Tower|Court|Mansion|House|Estate)[,\s]+(?:No\.\s*)?\d+[A-Z]?\s+[A-Za-z\s']+(?:Road|Rd|Street|St|Avenue|Ave|Drive|Dr|Lane|Ln|Path)[,\s]+(?:Central|Wan Chai|Causeway Bay|Tsim Sha Tsui|Mong Kok|Admiralty|Sheung Wan|Quarry Bay|Tai Koo|North Point|Kowloon|Hong Kong|HK)/gi,
+        type: 'ADDRESS_HK',
+        description: 'Hong Kong address (full format)'
+      },
+      hongKongAddressSimple: {
+        pattern: /(?:\d{1,3}\/F|Floor\s+\d+)[,\s]+[A-Za-z\s&']+(?:Building|Bldg|Plaza|Centre|Tower)[,\s]+[A-Za-z\s']+(?:Road|Rd|Street|St)/gi,
+        type: 'ADDRESS_HK',
+        description: 'Hong Kong address (simple format)'
+      },
+      hongKongBR: {
+        pattern: /\b\d{8}(?:-\d{3})?\b/g,
+        type: 'BR_HK',
+        description: 'Hong Kong Business Registration Number'
+      },
+
+      // Taiwan
+      taiwanID: {
+        pattern: /\b[A-Z]\d{9}\b/g,
+        type: 'NATIONAL_ID_TW',
+        description: 'Taiwan National ID (身分證)',
+        validator: 'validateTaiwanID'
+      },
+      taiwanPassport: {
+        pattern: /\b\d{9}\b/g,
+        type: 'PASSPORT_TW',
+        description: 'Taiwan Passport'
+      },
+
+      // Japan
+      japanMyNumber: {
+        pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,
+        type: 'MY_NUMBER_JP',
+        description: 'Japan My Number (マイナンバー)'
+      },
+      japanPassport: {
+        pattern: /\b[A-Z]{2}\d{7}\b/g,
+        type: 'PASSPORT_JP',
+        description: 'Japan Passport'
+      },
+
+      // South Korea
+      koreaRRN: {
+        pattern: /\b\d{6}[\s-]?\d{7}\b/g,
+        type: 'RRN_KR',
+        description: 'South Korea RRN (주민등록번호)',
+        validator: 'validateKoreaRRN'
+      },
+      koreaPassport: {
+        pattern: /\b[MSR]\d{8}\b/g,
+        type: 'PASSPORT_KR',
+        description: 'South Korea Passport'
+      },
+
+      // Malaysia
+      malaysiaMyKad: {
+        pattern: /\b\d{6}[\s-]?\d{2}[\s-]?\d{4}\b/g,
+        type: 'MYKAD_MY',
+        description: 'Malaysia MyKad',
+        validator: 'validateMalaysiaMyKad'
+      },
+      malaysiaPassport: {
+        pattern: /\b[AHK]\d{8}\b/g,
+        type: 'PASSPORT_MY',
+        description: 'Malaysia Passport'
+      },
+
+      // Thailand
+      thailandID: {
+        pattern: /\b\d[\s-]?\d{4}[\s-]?\d{5}[\s-]?\d{2}[\s-]?\d\b/g,
+        type: 'NATIONAL_ID_TH',
+        description: 'Thailand National ID',
+        validator: 'validateThailandID'
+      },
+      thailandPassport: {
+        pattern: /\b[A-Z]\d{7}\b/g,
+        type: 'PASSPORT_TH',
+        description: 'Thailand Passport'
+      },
+
+      // Indonesia
+      indonesiaKTP: {
+        pattern: /\b\d{16}\b/g,
+        type: 'KTP_ID',
+        description: 'Indonesia KTP (Kartu Tanda Penduduk)'
+      },
+      indonesiaPassport: {
+        pattern: /\b[A-C]\d{7}\b/g,
+        type: 'PASSPORT_ID',
+        description: 'Indonesia Passport'
+      },
+
+      // Philippines
+      philippinesUMID: {
+        pattern: /\b\d{4}[\s-]?\d{7}[\s-]?\d\b/g,
+        type: 'UMID_PH',
+        description: 'Philippines UMID'
+      },
+      philippinesPassport: {
+        pattern: /\b[PEG]\d{7}[A-Z]?\b/g,
+        type: 'PASSPORT_PH',
+        description: 'Philippines Passport'
+      },
+
+      // Vietnam
+      vietnamCMND: {
+        pattern: /\b\d{9}(?:\d{3})?\b/g,
+        type: 'CMND_VN',
+        description: 'Vietnam CMND/CCCD'
+      },
+      vietnamPassport: {
+        pattern: /\b[BC]\d{7}\b/g,
+        type: 'PASSPORT_VN',
+        description: 'Vietnam Passport'
+      },
+
+      // India
+      indiaAadhaar: {
+        pattern: /\b\d{4}\s?\d{4}\s?\d{4}\b/g,
+        type: 'AADHAAR_IN',
+        description: 'India Aadhaar',
+        validator: 'validateAadhaar'
+      },
+      indiaPAN: {
+        pattern: /\b[A-Z]{5}\d{4}[A-Z]\b/g,
+        type: 'PAN_IN',
+        description: 'India PAN Card'
+      },
+      indiaPassport: {
+        pattern: /\b[A-Z]\d{7}\b/g,
+        type: 'PASSPORT_IN',
+        description: 'India Passport'
+      },
+
+      // Pakistan
+      pakistanCNIC: {
+        pattern: /\b\d{5}[\s-]?\d{7}[\s-]?\d\b/g,
+        type: 'CNIC_PK',
+        description: 'Pakistan CNIC'
+      },
+      pakistanPassport: {
+        pattern: /\b[A-Z]{2}\d{7}\b/g,
+        type: 'PASSPORT_PK',
+        description: 'Pakistan Passport'
+      },
+
+      // Bangladesh
+      bangladeshNID: {
+        pattern: /\b\d{10}(?:\d{3}(?:\d{4})?)?\b/g,
+        type: 'NID_BD',
+        description: 'Bangladesh NID'
+      },
+      bangladeshPassport: {
+        pattern: /\b[A-Z]\d{7}\b/g,
+        type: 'PASSPORT_BD',
+        description: 'Bangladesh Passport'
+      },
+
+      // Myanmar
+      myanmarNRC: {
+        pattern: /\b\d{1,2}\/[A-Z]{3}\([A-Z]\)\d{6}\b/g,
+        type: 'NRC_MM',
+        description: 'Myanmar NRC'
+      },
+
+      // Sri Lanka
+      sriLankaNIC: {
+        pattern: /\b\d{9}[VXvx]\b/g,
+        type: 'NIC_LK',
+        description: 'Sri Lanka NIC'
+      },
+
+      // Nepal
+      nepalCitizenship: {
+        pattern: /\b\d{2,3}[\s-]?\d{2,3}[\s-]?\d{5,7}\b/g,
+        type: 'CITIZENSHIP_NP',
+        description: 'Nepal Citizenship Number'
+      },
+
+      // Cambodia
+      cambodiaID: {
+        pattern: /\b\d{9}\b/g,
+        type: 'NATIONAL_ID_KH',
+        description: 'Cambodia National ID'
+      },
+
+      // Laos
+      laosID: {
+        pattern: /\b\d{13}\b/g,
+        type: 'NATIONAL_ID_LA',
+        description: 'Laos National ID'
+      }
+    },
+    universalPatterns: {
+      email: {
+        pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+        type: 'EMAIL',
+        description: 'Email address'
+      },
+      creditCard: {
+        pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,
+        type: 'CREDIT_CARD',
+        description: 'Credit card number'
+      },
+      dateOfBirth: {
+        pattern: /\b(?:DOB|Date of Birth|Birth Date|Born on)[\s:]+(\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d{4}[-\/]\d{1,2}[-\/]\d{1,2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4})\b/gi,
+        type: 'DATE_OF_BIRTH',
+        description: 'Date of birth (with label)'
+      },
+      datePattern: {
+        pattern: /\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d{4}[-\/]\d{1,2}[-\/]\d{1,2})\b/g,
+        type: 'DATE',
+        description: 'Date (may include DOB)'
+      },
+      gender: {
+        pattern: /\b(?:Gender|Sex)[\s:]*\b(Male|Female|M|F|MALE|FEMALE|male|female)\b/gi,
+        type: 'GENDER',
+        description: 'Gender (with label)'
+      },
+      genderStandalone: {
+        pattern: /\b(Male|Female|MALE|FEMALE)\b/g,
+        type: 'GENDER',
+        description: 'Gender'
+      },
+
+      // Chinese Language Patterns
+      chineseGender: {
+        pattern: /(?:性别|性別)[\s:：]*([男女])/g,
+        type: 'GENDER_CN',
+        description: 'Chinese Gender (性别)'
+      },
+      chineseGenderStandalone: {
+        pattern: /\b([男女])(?=[性患员工]|[\s,;。，；]|$)/g,
+        type: 'GENDER_CN',
+        description: 'Chinese Gender character (男/女) with context'
+      },
+      chineseDateOfBirth: {
+        pattern: /(?:出生日期|出生年月日|生日|出生)[\s:：]*(\d{4}[-年\/]\d{1,2}[-月\/]\d{1,2}[日]?|\d{4}\.\d{1,2}\.\d{1,2})/g,
+        type: 'DATE_OF_BIRTH_CN',
+        description: 'Chinese Date of Birth (出生日期)'
+      },
+      chineseName: {
+        pattern: /(?:姓名|名字)[\s:：]*([\u4E00-\u9FFF]{2,4})/g,
+        type: 'NAME_CN',
+        description: 'Chinese Name (姓名)'
+      },
+      chineseNameStandalone: {
+        pattern: /([\u4E00-\u9FFF]{2,4}(?:先生|女士|医生|博士|教授|总经理|经理|主任))/g,
+        type: 'NAME_CN',
+        description: 'Chinese Name with title'
+      },
+      chineseAddress: {
+        pattern: /(?:地址|住址|详细地址|联系地址|家庭住址)[\s:：]*([\u4E00-\u9FFF\d\s]{5,}(?:省|市|区|县|街道|路|号|室|楼|栋|单元))/g,
+        type: 'ADDRESS_CN',
+        description: 'Chinese Address (地址)'
+      },
+      chineseAddressComponents: {
+        pattern: /([\u4E00-\u9FFF]{2,}(?:省|市|区|县|镇|乡|村|街道|路|巷|弄|号|室|楼|栋|单元|幢))/g,
+        type: 'ADDRESS_CN',
+        description: 'Chinese Address component'
+      },
+      chinesePhone: {
+        pattern: /(?:电话|手机|联系电话|联系方式|手机号码|电话号码)[\s:：]*(\d{3,4}[-\s]?\d{7,8}|\d{11})/g,
+        type: 'PHONE_CN',
+        description: 'Chinese Phone (电话)'
+      },
+      chineseIDCard: {
+        pattern: /(?:身份证号码|身份证号|身份证|证件号码)[\s:：]*(\d{17}[\dXx])/g,
+        type: 'NATIONAL_ID_CN',
+        description: 'Chinese ID Card (身份证)'
+      },
+      chineseEmail: {
+        pattern: /(?:电子邮件|邮箱|电邮|Email)[\s:：]*([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/gi,
+        type: 'EMAIL_CN',
+        description: 'Chinese Email label (邮箱)'
+      }
+    }
+  },
+  masking: {
+    strategies: {
+      REDACTION: {
+        name: 'Redaction',
+        format: (type) => `[REDACTED_${type}]`
+      },
+      TOKENIZATION: {
+        name: 'Tokenization',
+        format: (type, index) => `[${type}_${index}]`
+      },
+      PARTIAL: {
+        name: 'Partial Masking',
+        format: (value, type) => {
+          if (type === 'EMAIL') {
+            const parts = value.split('@');
+            return `${parts[0][0]}***@***${parts[1].slice(-5)}`;
+          }
+          if (type === 'PHONE_SG') {
+            return `****${value.slice(-4)}`;
+          }
+          return `${value[0]}${'*'.repeat(Math.max(0, value.length - 2))}${value.slice(-1)}`;
+        }
+      }
+    }
+  }
+};
+
+// ============================================================================
+// STATE
+// ============================================================================
+
+let currentDetections = [];
+let currentMaskedText = '';
+let currentOriginalText = '';
+let currentFilename = '';
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * SHA-256 hash
+ */
+async function hashContent(content) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Luhn algorithm for credit card validation
+ */
+function validateLuhn(cardNumber) {
+  const digits = cardNumber.replace(/\D/g, '');
+  let sum = 0;
+  let isEven = false;
+
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let digit = parseInt(digits[i]);
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    isEven = !isEven;
+  }
+
+  return sum % 10 === 0;
+}
+
+/**
+ * Validate NRIC checksum
+ */
+function validateNRIC(nric) {
+  const weights = [2, 7, 6, 5, 4, 3, 2];
+  const stCheckChars = 'JZIHGFEDCBA';
+  const fgCheckChars = 'XWUTRQPNMLK';
+
+  const prefix = nric[0];
+  const digits = nric.substring(1, 8);
+  const checkChar = nric[8];
+
+  let sum = 0;
+  for (let i = 0; i < 7; i++) {
+    sum += parseInt(digits[i]) * weights[i];
+  }
+
+  if (prefix === 'F' || prefix === 'G') {
+    sum += 4;
+  } else if (prefix === 'M') {
+    sum += 3;
+  }
+
+  const remainder = sum % 11;
+  const expectedChar = (prefix === 'S' || prefix === 'T' || prefix === 'M')
+    ? stCheckChars[remainder]
+    : fgCheckChars[remainder];
+
+  return expectedChar === checkChar;
+}
+
+// ============================================================================
+// DETECTION ENGINE
+// ============================================================================
+
+/**
+ * Detect PII using regex patterns
+ */
+async function detectPII(text) {
+  const detections = [];
+  const allPatterns = {
+    ...CONFIG.detection.asianIDPatterns,
+    ...CONFIG.detection.universalPatterns
+  };
+
+  for (const [id, pattern] of Object.entries(allPatterns)) {
+    const regex = new RegExp(pattern.pattern.source, pattern.pattern.flags);
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      // Validate specific patterns
+      let isValid = true;
+
+      // Use pattern-specific validator if available
+      if (pattern.validator && window.AsianIDValidators) {
+        const validatorFunc = window.AsianIDValidators[pattern.validator];
+        if (validatorFunc) {
+          isValid = validatorFunc(match[0]);
+        }
+      }
+      // Legacy validators (keep for backward compatibility)
+      else if (pattern.type === 'NRIC_SG') {
+        isValid = validateNRIC(match[0]);
+      } else if (pattern.type === 'CREDIT_CARD') {
+        isValid = validateLuhn(match[0]);
+      } else if (pattern.type === 'EMAIL') {
+        isValid = match[0].includes('@') && match[0].includes('.');
+      } else if (pattern.type === 'PHONE_SG') {
+        const digits = match[0].replace(/\D/g, '');
+        isValid = digits.length === 8 && /^[689]/.test(digits);
+      }
+      // For patterns without validators, apply basic validation
+      else {
+        // Accept all matches for patterns without specific validation
+        // Err on the side of caution (as requested)
+        isValid = true;
+      }
+
+      if (isValid) {
+        detections.push({
+          type: pattern.type,
+          value: match[0],
+          start: match.index,
+          end: match.index + match[0].length,
+          confidence: CONFIG.detection.thresholds.regex,
+          method: 'regex',
+          description: pattern.description,
+          hash: await hashContent(match[0])
+        });
+      }
+
+      // Prevent infinite loop
+      if (match.index === regex.lastIndex) {
+        regex.lastIndex++;
+      }
+    }
+  }
+
+  return detections.sort((a, b) => a.start - b.start);
+}
+
+/**
+ * Detect PII using NER model
+ */
+async function detectPIIWithNER(text) {
+  if (!CONFIG.detection.methods.ner || !window.nerPipeline) {
+    return [];
+  }
+
+  try {
+    // Call predict method with progress callback
+    const results = await window.nerPipeline.predict(text, (message) => {
+      // Update UI with progress message
+      console.log('[UI] Progress callback received:', message);
+      showProgress(true, message);
+    });
+    const detections = [];
+
+    for (const entity of results) {
+      // Get entity type (compatible with both Transformers.js and custom loader)
+      const entityType = entity.entity_group || entity.entity || 'UNKNOWN';
+
+      // Map NER entity types to PII types
+      let piiType = 'UNKNOWN';
+      if (entityType.includes('PER')) piiType = 'PERSON';
+      else if (entityType.includes('ORG')) piiType = 'ORGANIZATION';
+      else if (entityType.includes('LOC')) piiType = 'LOCATION';
+      else if (entityType === 'PER' || entityType === 'PERSON') piiType = 'PERSON';
+      else if (entityType === 'ORG' || entityType === 'ORGANIZATION') piiType = 'ORGANIZATION';
+      else if (entityType === 'LOC' || entityType === 'LOCATION') piiType = 'LOCATION';
+
+      // Skip UNKNOWN entities (not useful for PII detection)
+      if (piiType === 'UNKNOWN') {
+        console.log('[NER] Skipping UNKNOWN entity type:', entityType, 'word:', entity.word);
+        continue;
+      }
+
+      detections.push({
+        type: piiType,
+        value: entity.word,
+        start: entity.start,
+        end: entity.end,
+        confidence: entity.score,
+        method: 'ner',
+        description: `Named entity (${entityType})`,
+        hash: await hashContent(entity.word)
+      });
+    }
+
+    return detections;
+  } catch (error) {
+    console.error('NER detection error:', error);
+    return [];
+  }
+}
+
+/**
+ * Combine regex and NER detections
+ */
+async function detectAllPII(text) {
+  const regexDetections = await detectPII(text);
+  const nerDetections = CONFIG.detection.methods.ner ? await detectPIIWithNER(text) : [];
+
+  // Merge and deduplicate detections
+  const allDetections = [...regexDetections, ...nerDetections];
+
+  // Sort by position and remove overlaps (keep higher confidence)
+  allDetections.sort((a, b) => a.start - b.start);
+
+  const filtered = [];
+  for (const detection of allDetections) {
+    const overlaps = filtered.some(d =>
+      (detection.start >= d.start && detection.start < d.end) ||
+      (detection.end > d.start && detection.end <= d.end)
+    );
+
+    if (!overlaps) {
+      filtered.push(detection);
+    } else {
+      // Replace if higher confidence
+      const index = filtered.findIndex(d =>
+        (detection.start >= d.start && detection.start < d.end) ||
+        (detection.end > d.start && detection.end <= d.end)
+      );
+      if (index !== -1 && detection.confidence > filtered[index].confidence) {
+        filtered[index] = detection;
+      }
+    }
+  }
+
+  return filtered.sort((a, b) => a.start - b.start);
+}
+
+/**
+ * Mask PII in text
+ */
+function maskPII(text, detections, strategy) {
+  let masked = text;
+  let offset = 0;
+  const operations = [];
+
+  for (const detection of detections) {
+    const start = detection.start + offset;
+    const end = detection.end + offset;
+    const original = masked.substring(start, end);
+
+    const strategyConfig = CONFIG.masking.strategies[strategy];
+    let replacement;
+
+    if (typeof strategyConfig.format === 'function') {
+      const index = detections.indexOf(detection);
+      replacement = strategyConfig.format(original, detection.type, index);
+    } else {
+      replacement = strategyConfig.format;
+    }
+
+    masked = masked.substring(0, start) + replacement + masked.substring(end);
+    offset += replacement.length - original.length;
+
+    operations.push({
+      type: detection.type,
+      position: { start: detection.start, end: detection.end },
+      originalLength: original.length,
+      maskedLength: replacement.length
+    });
+  }
+
+  return {
+    content: masked,
+    operations
+  };
+}
+
+// ============================================================================
+// FILE PARSING
+// ============================================================================
+
+/**
+ * Parse text file
+ */
+async function parseTextFile(file) {
+  return await file.text();
+}
+
+/**
+ * Parse PDF file (using bundled PDF.js)
+ */
+async function parsePDF(file) {
+  try {
+    // Initialize PDF handler if not already done
+    if (!window.pdfHandler) {
+      window.pdfHandler = new PDFHandler();
+    }
+
+    // Parse the PDF
+    const pdfData = await window.pdfHandler.parsePDF(file);
+
+    // Store PDF data for later redaction
+    window.currentPDFData = pdfData;
+
+    console.log('[PDF] Parsed successfully:', {
+      pages: pdfData.numPages,
+      textLength: pdfData.text.length,
+      items: pdfData.textItems.length
+    });
+
+    return pdfData.text;
+  } catch (error) {
+    console.error('[PDF] Parse error:', error);
+
+    if (error.message.includes('download-pdf-libs.sh')) {
+      throw new Error(
+        'PDF libraries not installed. Run: ./download-pdf-libs.sh to enable PDF support.'
+      );
+    }
+
+    throw new Error(`PDF parsing failed: ${error.message}`);
+  }
+}
+
+/**
+ * Parse DOCX file (using mammoth.js from CDN)
+ */
+async function parseDOCX(file) {
+  // NOTE: DOCX parsing in browser extensions requires bundling mammoth.js locally
+  // due to Manifest V3 CSP restrictions on loading external scripts
+  throw new Error(
+    'DOCX parsing is not available in the extension version. ' +
+    'Chrome extensions cannot load external libraries from CDN. ' +
+    'Please use TXT files, or use the standalone version (index.html) for DOCX support. ' +
+    'See FILE_FORMAT_SUPPORT.md for details.'
+  );
+
+  /* To enable DOCX support, you would need to:
+   * 1. Download mammoth.js library file
+   * 2. Add it to the extension folder
+   * 3. Update manifest.json to include it
+   * 4. Update the code below to load from local files
+   *
+   * Example implementation (requires local mammoth.js file):
+   *
+   * if (!window.mammoth) {
+   *   const script = document.createElement('script');
+   *   script.src = chrome.runtime.getURL('libs/mammoth.browser.min.js');
+   *   await new Promise((resolve, reject) => {
+   *     script.onload = resolve;
+   *     script.onerror = reject;
+   *     document.head.appendChild(script);
+   *   });
+   * }
+   * const arrayBuffer = await file.arrayBuffer();
+   * const result = await window.mammoth.extractRawText({ arrayBuffer });
+   * return result.value;
+   */
+}
+
+/**
+ * Load external script
+ */
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.type = 'module';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * Parse document based on type
+ */
+async function parseDocument(file) {
+  const type = file.type;
+  const extension = file.name.split('.').pop().toLowerCase();
+
+  if (type === 'text/plain' || extension === 'txt') {
+    return await parseTextFile(file);
+  } else if (type === 'application/pdf' || extension === 'pdf') {
+    return await parsePDF(file);
+  } else if (type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || extension === 'docx') {
+    return await parseDOCX(file);
+  } else {
+    throw new Error(`Unsupported file type: ${type}. Supported: TXT, PDF, DOCX`);
+  }
+}
+
+// ============================================================================
+// UI FUNCTIONS
+// ============================================================================
+
+function showStatus(message, type) {
+  const status = document.getElementById('statusMessage');
+  status.textContent = message;
+  status.className = `status ${type}`;
+  status.style.display = 'block';
+}
+
+function hideStatus() {
+  document.getElementById('statusMessage').style.display = 'none';
+}
+
+function showProgress(show, message = 'Processing...') {
+  console.log('[UI] showProgress called:', { show, message });
+  const progress = document.getElementById('progress');
+  const progressText = document.getElementById('progressText');
+  const progressFill = document.querySelector('.progress-fill');
+
+  if (!progress) {
+    console.error('[UI] ERROR: progress element not found!');
+    return;
+  }
+
+  progress.style.display = show ? 'block' : 'none';
+  console.log('[UI] Set progress.style.display to:', progress.style.display);
+  console.log('[UI] Computed display style:', window.getComputedStyle(progress).display);
+
+  if (show) {
+    // Log element dimensions and visibility
+    const rect = progress.getBoundingClientRect();
+    console.log('[UI] Progress element dimensions:', {
+      width: rect.width,
+      height: rect.height,
+      top: rect.top,
+      left: rect.left,
+      visible: rect.width > 0 && rect.height > 0
+    });
+
+    // Extract percentage from message (e.g., "Processing chunk 3/10 (30%)...")
+    const percentMatch = message.match(/\((\d+)%\)/);
+    if (percentMatch && progressFill) {
+      const percentage = parseInt(percentMatch[1]);
+      progressFill.style.width = `${percentage}%`;
+      console.log('[UI] Progress bar updated to:', percentage + '%');
+    } else if (progressFill) {
+      // If no percentage in message (like initial message), start at 0% so first chunk animates forward
+      progressFill.style.width = '0%';
+      console.log('[UI] Progress bar reset to: 0% (no percentage in message)');
+    }
+  }
+
+  if (show && progressText) {
+    progressText.textContent = message;
+    console.log('[UI] Progress text updated to:', message);
+  } else if (show && !progressText) {
+    console.error('[UI] progressText element not found!');
+  }
+}
+
+/**
+ * Get line number from character position in text
+ */
+function getLineNumber(text, position) {
+  if (!text || typeof text !== 'string') {
+    return null;
+  }
+  const beforePosition = text.substring(0, position);
+  const lineNumber = beforePosition.split('\n').length;
+  return lineNumber;
+}
+
+/**
+ * Get page number from character position in PDF
+ */
+function getPageNumber(position) {
+  if (!window.currentPDFData || !window.currentPDFData.textItems) {
+    return null;
+  }
+
+  // Find which page this position falls on
+  let currentPos = 0;
+  for (const item of window.currentPDFData.textItems) {
+    if (!item || !item.str) continue;
+    const itemEnd = currentPos + item.str.length;
+    if (position >= currentPos && position < itemEnd) {
+      return item.page;
+    }
+    currentPos = itemEnd + 1; // +1 for space/newline between items
+  }
+
+  return window.currentPDFData.numPages; // Default to last page if not found
+}
+
+/**
+ * Get location string (page or line number)
+ */
+function getLocationString(position) {
+  const isPDF = window.currentFileType === 'application/pdf' ||
+                (currentFilename && currentFilename.endsWith('.pdf'));
+
+  if (isPDF && window.currentPDFData) {
+    const pageNum = getPageNumber(position);
+    return pageNum ? `Page ${pageNum}` : 'Position ' + position;
+  } else {
+    const lineNum = getLineNumber(currentOriginalText, position);
+    return lineNum ? `Line ${lineNum}` : 'Position ' + position;
+  }
+}
+
+/**
+ * Get human-readable method label
+ */
+function getMethodLabel(method) {
+  if (method === 'ner') {
+    return 'Model matched';
+  } else if (method === 'regex') {
+    return 'Pattern matched';
+  }
+  return method;
+}
+
+function displayResults(detections) {
+  if (detections.length === 0) {
+    showStatus('No PII detected in this document!', 'success');
+    return;
+  }
+
+  showStatus(`Detected ${detections.length} PII item(s)`, 'success');
+  document.getElementById('resultsCard').style.display = 'block';
+
+  // Summary
+  const summary = {};
+  detections.forEach(d => {
+    summary[d.type] = (summary[d.type] || 0) + 1;
+  });
+
+  const summaryDiv = document.getElementById('summary');
+  summaryDiv.innerHTML = '';
+  Object.entries(summary).forEach(([type, count]) => {
+    summaryDiv.innerHTML += `
+      <div class="summary-card">
+        <div class="summary-value">${count}</div>
+        <div class="summary-label">${type}</div>
+      </div>
+    `;
+  });
+
+  // Detections list
+  const listDiv = document.getElementById('detectionsList');
+  listDiv.innerHTML = '';
+  detections.slice(0, 20).forEach((d, i) => {
+    const location = getLocationString(d.start);
+    const methodLabel = getMethodLabel(d.method);
+    const confidence = (d.confidence * 100).toFixed(0);
+
+    listDiv.innerHTML += `
+      <div class="detection-item">
+        <div class="detection-type">#${i + 1}: ${d.type}</div>
+        <div class="detection-meta">
+          ${location} | ${methodLabel} | ${confidence}% confidence
+        </div>
+      </div>
+    `;
+  });
+
+  if (detections.length > 20) {
+    listDiv.innerHTML += `
+      <div style="text-align: center; padding: 0.5rem; color: #64748b; font-size: 0.85rem;">
+        ... and ${detections.length - 20} more
+      </div>
+    `;
+  }
+}
+
+// ============================================================================
+// EVENT HANDLERS
+// ============================================================================
+
+document.getElementById('uploadZone').addEventListener('click', () => {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('changeFileBtn').addEventListener('click', () => {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  if (!e.target.files[0]) return;
+
+  const file = e.target.files[0];
+  currentFilename = file.name;
+  window.currentFile = file; // Store for later use
+  window.currentFileType = file.type;
+
+  // Validate file size (30MB limit)
+  const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB in bytes
+  if (file.size > MAX_FILE_SIZE) {
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    showStatus(`File too large (${fileSizeMB}MB). Maximum file size is 30MB.`, 'error');
+    return;
+  }
+
+  // Show file info instead of upload zone
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('fileInfo').style.display = 'block';
+  document.getElementById('fileName').textContent = file.name;
+  const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+  const fileSizeKB = (file.size / 1024).toFixed(0);
+  document.getElementById('fileSize').textContent = file.size > 1024 * 1024
+    ? `${fileSizeMB} MB`
+    : `${fileSizeKB} KB`;
+
+  hideStatus();
+  showProgress(true, 'Parsing document...');
+
+  try {
+    // Parse document
+    currentOriginalText = await parseDocument(file);
+
+    showProgress(true, 'Detecting PII...');
+
+    // Detect PII (regex + NER if available)
+    currentDetections = await detectAllPII(currentOriginalText);
+
+    // Mask PII
+    const strategy = document.getElementById('maskingStrategy').value;
+    const result = maskPII(currentOriginalText, currentDetections, strategy);
+    currentMaskedText = result.content;
+
+    showProgress(false);
+    displayResults(currentDetections);
+
+    // Update download button text based on file type
+    const downloadBtn = document.getElementById('downloadMasked');
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      downloadBtn.textContent = 'Download Redacted PDF';
+    } else {
+      downloadBtn.textContent = 'Download Masked';
+    }
+
+  } catch (error) {
+    showProgress(false);
+    showStatus(`Error: ${error.message}`, 'error');
+    console.error(error);
+  }
+});
+
+document.getElementById('downloadMasked').addEventListener('click', async () => {
+  if (!currentMaskedText && !currentDetections) {
+    showStatus('No masked document available', 'error');
+    return;
+  }
+
+  try {
+    // Check if this is a PDF file
+    const isPDF = window.currentFileType === 'application/pdf' ||
+                  (currentFilename && currentFilename.endsWith('.pdf'));
+
+    if (isPDF && window.currentPDFData) {
+      // Create redacted PDF with true text removal
+      showProgress(true, 'Flattening PDF and removing PII text completely...');
+
+      const strategy = document.getElementById('maskingStrategy').value;
+      const pdfBlob = await window.pdfHandler.createRedactedPDF(
+        window.currentPDFData.arrayBuffer,
+        currentDetections,
+        window.currentPDFData.textItems,
+        strategy
+      );
+
+      showProgress(false);
+
+      // Download the redacted PDF
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `redacted_${currentFilename || 'document.pdf'}`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Show success message
+      showStatus('✅ Redacted PDF downloaded with TRUE text removal (flattened to images)', 'success');
+
+      // Show info about the approach
+      console.log('[PDF] ℹ️  PDF was flattened to images for complete text removal');
+      console.log('[PDF] ℹ️  File size may be larger than original (images vs text)');
+      console.log('[PDF] ℹ️  Text under black boxes is COMPLETELY REMOVED');
+    } else {
+      // Download masked text file
+      const blob = new Blob([currentMaskedText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `masked_${currentFilename || 'document.txt'}`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      showStatus('Masked document downloaded', 'success');
+    }
+  } catch (error) {
+    showProgress(false);
+    showStatus(`Error creating masked document: ${error.message}`, 'error');
+    console.error('Download error:', error);
+  }
+});
+
+document.getElementById('downloadReport').addEventListener('click', () => {
+  if (currentDetections.length === 0) {
+    showStatus('No detections to report', 'error');
+    return;
+  }
+
+  const report = {
+    reportId: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    document: {
+      name: currentFilename,
+      size: currentOriginalText.length
+    },
+    summary: {
+      totalDetections: currentDetections.length,
+      byType: {}
+    },
+    detections: currentDetections.map(d => ({
+      type: d.type,
+      method: getMethodLabel(d.method),
+      confidence: d.confidence,
+      location: getLocationString(d.start),
+      position: {
+        start: d.start,
+        end: d.end
+      },
+      hash: d.hash
+    }))
+  };
+
+  currentDetections.forEach(d => {
+    report.summary.byType[d.type] = (report.summary.byType[d.type] || 0) + 1;
+  });
+
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pii-report-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showStatus('Report downloaded', 'success');
+});
+
+// ============================================================================
+// ML MODEL AUTO-LOADING
+// ============================================================================
+
+/**
+ * Load ML model (called automatically on startup)
+ */
+async function loadMLModel() {
+  const modelStatus = document.getElementById('modelStatus');
+  const btn = document.getElementById('preloadBtn');
+
+  // Check if already loaded
+  if (window.nerPipeline && CONFIG.detection.methods.ner) {
+    console.log('[ML] Model already loaded, skipping');
+    // Hide status when model is ready (only show on error)
+    modelStatus.style.display = 'none';
+    modelStatus.classList.remove('active');
+    if (btn) {
+      btn.style.display = 'none'; // Hide retry button
+      btn.disabled = true;
+    }
+    return;
+  }
+
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.style.display = 'none'; // Hide while loading
+    }
+    modelStatus.style.display = 'block';
+    modelStatus.classList.add('active');
+    modelStatus.textContent = 'Auto-loading ML model (step 1/4)...';
+
+    // STEP 1: DISABLE WEB WORKERS COMPLETELY (CRITICAL for extension CSP)
+    // Keep Workers disabled throughout the ENTIRE ML loading process
+    const OriginalWorker = window.Worker;
+
+    // Monkey-patch Worker to prevent ANY worker creation
+    window.Worker = class {
+      constructor(url, options) {
+        console.warn('[ML] ⛔ Blocked Worker creation:', url);
+        throw new Error('Workers disabled for Chrome extension compatibility');
+      }
+    };
+    console.log('[ML] 🔒 Worker constructor DISABLED for ML loading');
+
+    // STEP 2: Load and configure ONNX Runtime
+    if (!window.ort) {
+      const ortUrl = chrome.runtime.getURL('libs/onnx/ort.min.js');
+      const script = document.createElement('script');
+      script.src = ortUrl;
+
+      await new Promise((resolve, reject) => {
+        script.onload = () => {
+          setTimeout(() => {
+            if (window.ort) {
+              // Configure for single-threaded mode
+              window.ort.env.wasm.numThreads = 1;
+              window.ort.env.wasm.simd = true;
+              window.ort.env.wasm.proxy = false;
+              window.ort.env.wasm.wasmPaths = chrome.runtime.getURL('libs/onnx/');
+
+              console.log('[ML] ✓ ONNX configured:', {
+                threads: window.ort.env.wasm.numThreads,
+                proxy: window.ort.env.wasm.proxy
+              });
+
+              resolve();
+            } else {
+              reject(new Error('ONNX Runtime loaded but not available'));
+            }
+          }, 100);
+        };
+        script.onerror = () => reject(new Error('ONNX Runtime not found. Run: ./download-ml-libs.sh'));
+        document.head.appendChild(script);
+      });
+    } else {
+      window.ort.env.wasm.numThreads = 1;
+      window.ort.env.wasm.simd = true;
+      window.ort.env.wasm.proxy = false;
+      window.ort.env.wasm.wasmPaths = chrome.runtime.getURL('libs/onnx/');
+    }
+
+    modelStatus.textContent = 'Loading bundled NER model from local files (step 3/4)...';
+
+    // STEP 3: Use Custom NER Loader (bypasses Transformers.js)
+    // MUST use chrome.runtime.getURL() for extension resources
+    if (!window.nerPipeline) {
+      // Get full chrome-extension:// URL
+      const modelPath = chrome.runtime.getURL('models/bert-base-NER');
+
+      console.log('[ML] Using custom NER loader for bundled model');
+      console.log('[ML] Full model path:', modelPath);
+      console.log('[ML] Expected config URL:', modelPath + '/config.json');
+
+      // Create custom loader instance
+      const customLoader = new window.CustomNERLoader();
+
+      // Load model files
+      await customLoader.load(modelPath);
+
+      // Set as pipeline
+      window.nerPipeline = customLoader;
+
+      console.log('[ML] ✓ Custom NER loader initialized with bundled model');
+    }
+
+    modelStatus.textContent = 'Initializing NER pipeline (step 4/4)...';
+
+    // STEP 6: Restore Worker constructor AFTER everything is loaded
+    window.Worker = OriginalWorker;
+    console.log('[ML] 🔓 Worker constructor restored (ML fully loaded)');
+
+    console.log('[ML] NER pipeline ready!');
+
+    // Update config to enable NER
+    CONFIG.detection.methods.ner = true;
+
+    // Save model cache status
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'cacheModel'
+      });
+    } catch (e) {
+      console.warn('Could not save model cache status:', e);
+    }
+
+    // Hide status when model loads successfully (only show on error)
+    modelStatus.style.display = 'none';
+    modelStatus.classList.remove('active');
+
+    // Keep retry button hidden on success
+    if (btn) {
+      btn.style.display = 'none';
+    }
+
+    showStatus('✅ ML model auto-loaded! Detecting emails, IDs, phones, names, organizations, and locations.', 'success');
+
+    console.log('[ML] Auto-load complete. Single-threaded mode, LOCAL bundled model (100% offline).');
+
+  } catch (error) {
+    // Show error status (only show modelStatus on errors)
+    modelStatus.style.display = 'block';
+    modelStatus.textContent = `✗ ML auto-load failed (regex detection still works)`;
+    modelStatus.style.background = '#fee2e2';
+    modelStatus.style.borderColor = '#ef4444';
+    modelStatus.style.color = '#991b1b';
+    modelStatus.classList.add('active');
+
+    if (error.message.includes('download-ml-libs.sh')) {
+      showStatus('⚠️ ML libraries not found. Run ./download-ml-libs.sh to enable ML. Regex detection works!', 'info');
+    } else if (error.message.includes('Worker') || error.message.includes('blob')) {
+      showStatus('⚠️ ML loading error. Regex detection works! Click retry button to try again.', 'info');
+    } else {
+      showStatus('⚠️ ML auto-load failed. Regex detection works! Click retry button to try again.', 'info');
+    }
+
+    console.error('[ML] Model loading error:', error);
+    console.error('[ML] Error details:', error.message);
+    console.error('[ML] Error stack:', error.stack);
+    console.error('[ML] ONNX config:', window.ort?.env?.wasm);
+
+    // Show retry button on error
+    if (btn) {
+      btn.disabled = false;
+      btn.style.display = 'inline-block';
+      btn.textContent = 'Retry Loading ML Model';
+    }
+  }
+}
+
+// Button click handler - manual retry
+document.getElementById('preloadBtn').addEventListener('click', async () => {
+  await loadMLModel();
+});
+
+// Auto-load ML model on extension startup
+console.log('[ML] Auto-loading bundled ML model...');
+loadMLModel().catch(err => {
+  console.error('[ML] Auto-load failed:', err);
+  // Error is already handled in loadMLModel function
+});
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+console.log('Local PII Masking Extension Loaded');
+showStatus('Ready to detect PII. Upload a document to begin.', 'info');

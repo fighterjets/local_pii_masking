@@ -1,0 +1,10 @@
+John Smith works at Google in New York. His colleague Mary Johnson is from Microsoft in Seattle. They met with David Chen from Amazon in San Francisco to discuss the project. The meeting was held at Stanford University with Professor Sarah Williams.
+
+Contact information:
+- Email: john.smith@example.com
+- Phone: +6591234567
+- NRIC: S1234567D
+
+Organizations mentioned: Apple, Facebook, Tesla, NASA
+People mentioned: Bill Gates, Elon Musk, Jeff Bezos
+Locations mentioned: London, Paris, Tokyo, Singapore

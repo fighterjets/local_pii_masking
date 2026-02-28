@@ -1,0 +1,7 @@
+Custom NER Loader: 1.0.0
+ONNX Runtime: 1.14.0 (single-threaded)
+NER Model: BERT-base-NER (quantized, pre-bundled)
+Mode: Extension-safe (no Web Workers)
+Downloaded: Wed Feb 18 19:56:06 +08 2026
+Total Size: 359M
+Configuration: numThreads=1, proxy=false, simd=true, localModels=true

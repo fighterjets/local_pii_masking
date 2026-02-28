@@ -1,0 +1,49 @@
+Test Document for Chinese PII Detection
+========================================
+
+Test Case 1: Chinese Company Names
+-----------------------------------
+公司名称：上海顶峰精密制造有限公司
+联系单位：北京华为技术有限公司
+企业名称：阿里巴巴集团
+业务往来：中国工商银行
+合作伙伴：深圳腾讯科技有限公司
+
+Test Case 2: Romanized Chinese Names with Titles
+------------------------------------------------
+Contact: Mr. ZHANG Wei
+Manager: Ms. LI Hua
+Director: Dr. WANG Xiaoming
+Professor: Prof. CHEN Yang
+President: Mrs. LIU Jing
+
+Test Case 3: Romanized Names Without Titles
+-------------------------------------------
+Sales: ZHANG Wei
+Marketing: WANG Xiaoming
+Engineering: LI Hua Ming
+
+Test Case 4: Title Case Names (Lower Confidence)
+-------------------------------------------------
+Team Lead: Zhang Wei
+Coordinator: Wang Xiaoming
+Assistant: Li Hua
+
+Test Case 5: Mixed Content
+---------------------------
+Contract No: 2024-001
+Party A: 上海顶峰精密制造有限公司
+Representative: Mr. ZHANG Wei
+Email: zhang.wei@dingfeng.com
+Phone: +86 21 1234 5678
+Company: 北京华为技术有限公司
+Contact: Ms. LI Hua
+Mobile: +86 138 1234 5678
+
+Test Case 6: Should NOT Detect (False Positives)
+-------------------------------------------------
+Location: New York
+City: Los Angeles
+Position: General Manager
+School: Public School
+Company (too short): 公司

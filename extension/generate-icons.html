@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Icon Generator - Local PII Masking</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 2rem;
+      background: #f8fafc;
+      text-align: center;
+    }
+    h1 {
+      color: #2563eb;
+      margin-bottom: 2rem;
+    }
+    .instructions {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+    }
+    .canvas-container {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+    .icon-preview {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    canvas {
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0.5rem;
+    }
+    button:hover {
+      background: #1e40af;
+    }
+    .success {
+      color: #10b981;
+      margin-top: 1rem;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔒 Local PII Masking Icon Generator</h1>
+
+  <div class="instructions">
+    <h3>Instructions:</h3>
+    <ol>
+      <li>Click the "Generate Icons" button below</li>
+      <li>Right-click each icon and save as:
+        <ul>
+          <li><strong>icon16.png</strong> (16x16)</li>
+          <li><strong>icon48.png</strong> (48x48)</li>
+          <li><strong>icon128.png</strong> (128x128)</li>
+        </ul>
+      </li>
+      <li>Save all icons to the <code>extension/icons/</code> folder</li>
+    </ol>
+  </div>
+
+  <button onclick="generateIcons()">Generate Icons</button>
+
+  <div class="canvas-container" id="iconContainer"></div>
+
+  <div id="status"></div>
+
+  <script>
+    function generateIcons() {
+      const container = document.getElementById('iconContainer');
+      container.innerHTML = '';
+
+      const sizes = [16, 48, 128];
+
+      sizes.forEach(size => {
+        // Create canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Draw icon
+        drawIcon(ctx, size);
+
+        // Create preview container
+        const preview = document.createElement('div');
+        preview.className = 'icon-preview';
+
+        const title = document.createElement('div');
+        title.textContent = `${size}x${size}`;
+        title.style.marginBottom = '0.5rem';
+        title.style.fontWeight = 'bold';
+        title.style.color = '#2563eb';
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = `Download icon${size}.png`;
+        downloadBtn.onclick = () => downloadIcon(canvas, size);
+
+        preview.appendChild(title);
+        preview.appendChild(canvas);
+        preview.appendChild(downloadBtn);
+
+        container.appendChild(preview);
+      });
+
+      document.getElementById('status').innerHTML =
+        '<div class="success">✓ Icons generated! Right-click to save or use download buttons.</div>';
+    }
+
+    function drawIcon(ctx, size) {
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#2563eb');
+      gradient.addColorStop(1, '#1e40af');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      // Lock icon
+      const scale = size / 128;
+
+      // Lock body
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(
+        35 * scale,
+        70 * scale,
+        58 * scale,
+        40 * scale
+      );
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 8 * scale;
+      ctx.strokeRect(
+        35 * scale,
+        70 * scale,
+        58 * scale,
+        40 * scale
+      );
+
+      // Lock shackle
+      ctx.beginPath();
+      ctx.arc(
+        64 * scale,
+        55 * scale,
+        20 * scale,
+        Math.PI,
+        0,
+        false
+      );
+      ctx.lineWidth = 8 * scale;
+      ctx.stroke();
+
+      // Keyhole
+      ctx.fillStyle = '#2563eb';
+      ctx.beginPath();
+      ctx.arc(
+        64 * scale,
+        85 * scale,
+        6 * scale,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.fillRect(
+        61 * scale,
+        85 * scale,
+        6 * scale,
+        10 * scale
+      );
+
+      // Add subtle border for clarity
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, size, size);
+    }
+
+    function downloadIcon(canvas, size) {
+      const link = document.createElement('a');
+      link.download = `icon${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      document.getElementById('status').innerHTML +=
+        `<div class="success">✓ Downloaded icon${size}.png</div>`;
+    }
+
+    // Auto-generate on load
+    window.addEventListener('load', generateIcons);
+  </script>
+</body>
+</html>

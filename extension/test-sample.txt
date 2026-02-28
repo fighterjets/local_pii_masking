@@ -1,0 +1,50 @@
+LOCAL PII MASKING TEST DOCUMENT
+=============================
+
+This document contains various types of PII for testing the Local PII Masking extension.
+
+EMAILS:
+-------
+Contact me at john.doe@example.com or jane.smith@company.org
+Support email: support@test-domain.com
+
+CREDIT CARDS:
+-------------
+Test card: 4532-1488-0343-6467
+Another card: 5425233430109903
+
+SINGAPORE NRIC:
+---------------
+Employee ID: S1234567D
+Visitor pass: G9876543X
+Foreign worker: F1357924K
+
+SINGAPORE PHONE NUMBERS:
+------------------------
+Office: +65 6123 4567
+Mobile: 91234567
+Home: 6555 8888
+
+POSTAL CODES:
+-------------
+Office address: 238880
+Home address: 018956
+
+MIXED CONTENT:
+--------------
+Please contact John Doe (NRIC: S9876543A) at john.doe@email.com
+or call him at +65 98765432. His credit card ending in 4532-1488-0343-6467
+is registered to postal code 238888.
+
+Jane Smith can be reached at jane@company.sg (mobile: 81234567).
+Her NRIC is S1234567Z and she lives in postal code 018989.
+
+EDGE CASES:
+-----------
+Invalid NRIC (bad checksum): S1234567A
+Invalid card (fails Luhn): 1234 5678 9012 3456
+Regular 6-digit number (not postal): 999999
+Email without domain: notanemail@
+Partial phone: 123
+
+END OF TEST DOCUMENT

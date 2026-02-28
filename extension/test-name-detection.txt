@@ -1,0 +1,57 @@
+Test Document for Name Detection
+=================================
+
+Simple Test Cases:
+------------------
+John Smith works at Google.
+Mary Johnson lives in London.
+BOOPALAN NATESAN is from India.
+David Chen joined Microsoft.
+
+Indian Names:
+-------------
+Rajesh Kumar works at Infosys.
+Priya Sharma is from Mumbai.
+BOOPALAN NATESAN lives in Chennai.
+Amit Patel joined TCS.
+
+Various Formats:
+----------------
+Employee: BOOPALAN NATESAN
+Manager: Sarah Williams
+Director: Michael Chen
+CEO: Bill Gates
+
+Context Test:
+-------------
+BOOPALAN NATESAN, Senior Engineer at Google India, has been working with the team since 2020. He collaborates with John Smith from the Singapore office.
+
+Contact Information:
+--------------------
+Name: BOOPALAN NATESAN
+Email: boopalan.natesan@example.com
+Phone: +91 9876543210
+DOB: 15/03/1985
+Gender: Male
+Sex: FEMALE
+
+All Caps vs Mixed Case:
+-----------------------
+BOOPALAN NATESAN (all caps)
+Boopalan Natesan (title case)
+boopalan natesan (lowercase - should fail)
+JOHN SMITH (all caps)
+John Smith (title case)
+
+Gender Detection:
+-----------------
+Gender: Male
+Gender: Female
+Sex: MALE
+Sex: FEMALE
+Gender: M
+Gender: F
+Standalone: Male
+Standalone: Female
+Standalone: MALE
+Standalone: FEMALE
